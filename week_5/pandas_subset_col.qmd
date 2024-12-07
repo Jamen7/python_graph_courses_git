@@ -1,0 +1,169 @@
+
+# Subsetting Columns
+
+
+```{python}
+import pandas as pd
+
+```
+
+# Dataset
+
+
+```{python}
+yao = pd.read_csv("../data/yaounde_data.csv")
+yao
+```
+
+## Selecting columns with square brackets
+
+
+```{python}
+yao[["age", "sex"]]
+```
+
+
+```{python}
+# this code does not work
+# yao["age","sex"]
+```
+
+
+```{python}
+yao["age"]
+```
+
+```{python}
+yao[["age"]]
+```
+
+## Storing data subsets
+
+
+```{python}
+yao_subset = yao[["age", "sex"]]
+yao_subset
+```
+
+
+```{python}
+yao_subset = yao_subset[["age"]]
+yao_subset
+```
+
+## Practice Q: select col with []
+
+
+```{python}
+yao_weight_height = yao[["weight_kg", "height_cm"]]
+yao_weight_height
+```
+
+## Excluding col with drop()
+
+
+```{python}
+yao.drop(columns=["age"])
+```
+
+
+```{python}
+yao.drop(columns=["age","age_category"])
+```
+
+# Practice Q: Drop cols with drop()
+
+
+```{python}
+yao_no_education_consultation = yao.drop(columns=["highest_education", "consultation"])
+yao_no_education_consultation
+```
+
+## Using filter to select cols by regex
+
+Regex : Regular Expressions
+
+
+```{python}
+yao.filter(regex="ig")
+```
+
+
+```{python}
+yao.filter(regex="^ig") # Start with ig
+```
+
+
+```{python}
+yao.filter(regex="result$") # ends with result
+```
+
+## Practice Q: select cols with regex
+
+
+```{python}
+yao_is_columns = yao.filter(regex="^is_")
+yao_is_columns
+```
+
+## Change col names with rename
+
+
+```{python}
+yao.rename(columns={"age": "patient_age", "sex": "patient_sex"})
+```
+
+## Practice Q: rename cols with rename()
+```{python}
+yao_age_cat = yao.rename(columns={"age_category": "age_cat"})
+```
+
+## Cleaning messy col names
+
+
+```{python}
+test_df = pd.DataFrame(
+    {"good_name": range(3),
+    "bad name": range(3),
+    "bad*@name*2": range(3)}
+)
+test_df
+```
+
+```{python}
+# bad names are not accessible through dot syntax
+# test_df.bad name
+```
+
+
+```{python}
+test_df.columns.str.replace(r"[^a-zA-Z0-9]","_",regex=True)
+```
+
+
+```{python}
+test_df.columns = test_df.columns.str.replace(r"[^a-zA-Z0-9]","_",regex=True)
+```
+
+
+```{python}
+test_df
+```
+
+## Practice Q: clean col names with regex
+
+
+```{python}
+cleaning_practice = pd.DataFrame(
+    {"Aloha": range(3), "Bell Chart": range(3), "Animals@the zoo": range(3)}
+)
+cleaning_practice
+```
+
+```{python}
+cleaning_practice.columns= cleaning_practice.columns.str.replace(r"[^a-zA-Z0-9]","_",regex=True)
+```
+
+```{python}
+cleaning_practice
+```

@@ -1,0 +1,259 @@
+---
+title: "Workshop 7: Using LLMs to Extract Information from Job Descriptions"
+author: "James Matosse"
+---
+
+# Introduction
+
+For this week's workshop, you will analyze job posting data using Large Language Models (LLMs). You'll extract structured information from job descriptions and create visualizations to understand patterns in the data science job market.
+
+# Setup
+
+First, make sure this document is in your `graph_courses_python` folder, where your virtual environment is activated and you have the required packages installed.
+
+Run the following code to load the necessary packages:
+
+```{python}
+from openai import OpenAI
+import pandas as pd
+import numpy as np
+import plotly.express as px
+from local_settings import OPENAI_KEY # Assumes you have a local_settings.py file in your folder with your OpenAI key  
+# Initialize the OpenAI client
+client = OpenAI(api_key=OPENAI_KEY)
+```
+
+# Define an `llm_chat` Function
+
+Before we start our analysis, let's create a helper function to simplify interactions with the LLM.
+
+Test the function below by asking the question "What is Python (the language) named after?"
+
+```{python}
+def llm_chat(message):
+    response = client.chat.completions.create(
+        model="gpt-4o-mini", messages=[{"role": "user", "content": message}]
+    )
+    return response.choices[0].message.content
+
+```
+
+```{python}
+# Test the function here
+llm_chat("What is Python (the language) named after?")
+```
+
+# Get the Data
+
+The dataset to be used contains job postings scraped from the website Glassdoor. You can see the scraping project [here](https://github.com/picklesueat/data_jobs_data).
+
+Download it from the course website and place it in an appropriate location in your folder.
+
+Load the data into a pandas DataFrame:
+
+```{python}
+# Load the data into a pandas DataFrame
+# Your code here
+job_data = pd.read_csv("../data/glassdoor_jobs_sample.csv")
+```
+
+# Task 1: Extract Years of Experience Required
+
+## Part A: Create and Test LLM Function
+
+We will use the LLM to extract the minimum years of experience required from job descriptions.
+
+We have written the prompt for you. Vectorize the function, then test it on the first few rows of the dataset.
+
+```{python}
+def yrs_exp(description):
+    prompt = f"""
+    Extract the minimum years of experience required from this job description. 
+    Return ONLY a number. If a range is given, return the lower number.
+    If no years of experience are explicitly mentioned, return 'NA'.
+    Here's the job description:
+    {description}
+    """
+    return llm_chat(prompt)
+
+# Vectorize the function and test it on the first few rows
+yrs_exp_vec = np.vectorize(yrs_exp)
+
+job_sum = job_data.head()
+
+job_sum['min_yrs']= yrs_exp_vec(job_sum['job_description'])
+job_sum
+```
+
+Write the data to a CSV file and check if the results make sense by comparing them to the original job descriptions.
+
+```{python}
+job_sum.to_csv("../outputs/job_minYr.csv", index=False)
+```
+
+## Part B: Process Full Dataset
+
+Now that we've confirmed the function works well, let's apply it to the full dataset. Note that this may take about 2 to 3 minutes to run. (For heavier workflows, we recommend you look into 'parallel processing'.)
+
+```{python}
+# Apply the vectorized function to the full dataset
+job_data
+job_data['min_yrs']= yrs_exp_vec(job_data['job_description'])
+job_data
+```
+
+## Part C: Convert to Numeric
+
+The `years_required` column is currently a string. Convert it to a numeric type using the `pd.to_numeric` function, with the `errors='coerce'` argument so that any non-numeric values are converted to `NaN`.
+
+```{python}
+# Convert 'years_required' to numeric
+job_data['min_yrs'] = pd.to_numeric(job_data['min_yrs'], errors='coerce')
+```
+
+## Part D: Create Visualization
+
+Create a visualization comparing years of experience required to the midpoint salary estimate. You'll need to:
+
+- Create a scatter plot using Plotly Express.
+- Use the `midpoint_salary_estimate` column for salary and `years_required` for the x-axis.
+
+```{python}
+# Create a scatter plot
+px.scatter(job_data, x='min_yrs', y='midpoint_salary_estimate')
+```
+
+Describe any relationships you see in the plot.
+Answer: The trend flattens out after the 8 years of experience
+
+# Task 2: Extract Programming Language Requirements
+
+In this task, we will ask the LLM to extract the programming languages mentioned in the job descriptions.
+
+
+## Part A: Create and Test LLM Function
+
+Now, create a function that asks the model about the programming languages mentioned in the job description. Specifically, it should return one of four categories regarding the languages mentioned: `"R"`, `"Python"`, `"both"`, or `"neither"`. This time, you'll need to craft the prompt yourself.
+
+Test your function on a few rows and refine your prompt until you get reliable results. (You can write the output to a CSV file to more easily compare the results to the original job descriptions.)
+
+```{python}
+def lang_req(description):
+    # Craft your prompt here
+    prompt = f"""
+    Extract programming languages mentioned in this job description.
+    If "R" or "R skills" is mentioned (capitalized or not): return "R".
+    If "Python" or "py" or "Python skills" is mentioned (capitalized or not): return "Python".
+    If both "R" and/or "Python" are mentioned: return "both".
+    If "R" and/or "Python" are not explicitly mentioned:  return "neither".
+    Return ONLY one of the four categories: "R", "Python", "both", or "neither".
+    Here's the job description:
+    {description}
+    """
+    return llm_chat(prompt)
+
+# Vectorize the function and test it on the first few rows
+lang_req_vec = np.vectorize(lang_req)
+job_sum['lang_req'] = lang_req_vec(job_sum['job_description'])
+job_sum
+```
+
+
+
+## Part B: Process Full Dataset
+
+Once you're satisfied with your function's performance, apply it to the full dataset:
+
+```{python}
+# Apply the function to the full dataset
+job_data['lang_req'] = lang_req_vec(job_data['job_description'])
+job_data
+```
+
+## Part C: Create Visualization
+
+First, count the number of jobs that require each of the four categories using the `value_counts` method. 
+
+```{python}
+# Count the occurrences of each category
+job_data['lang_req'].value_counts()
+```
+
+Create a box plot comparing salary distributions across the different programming language requirement categories:
+
+```{python}
+# Create a box plot using Plotly Express
+px.box(job_data, x='lang_req', y='midpoint_salary_estimate', points='all')
+```
+
+Write a few sentences describing any patterns you see in the plot. (Note that this is a very small sample of jobs, so don't read too much into the results.)
+Answer: Most of the job description do not mention Python or R. But there seems to be more requirements for both programming languages. 
+
+# Optional Challenge: Most Common Technical Skills
+
+Use an LLM function to extract the most common technical skills mentioned in job descriptions, then create a visualization to highlight these skills.
+
+You will need to design your own approach to extract and standardize technical skills, being explicit in your prompt about what constitutes a technical skill.
+
+There's no single correct way to classify and standardize skills—document your choices and reasoning as you develop your solution.
+
+```{python}
+def skills_req(description):
+    # Craft your prompt here
+    prompt = f"""
+    Extract the most common technical skills mentioned in this job description.
+    Technical skills are practical and related to the tools and knowledge an applicant needs to perform the job.
+    Return a list of the top 5 technical skills for the job, no explainations just the list.
+    Do not include index or hyphen ("- ...") before each element of the list for example "- SQL" should read as "SQL".
+    Here's the job description:
+    {description}
+    """
+    return llm_chat(prompt)
+
+# Vectorize the function and test it on the first few rows
+skills_req_vec = np.vectorize(skills_req)
+job_sum['skills_req'] = skills_req_vec(job_sum['job_description'])
+job_sum
+```
+
+```{python}
+
+job_data['skills_req'] = skills_req_vec(job_data['job_description'])
+job_data
+```
+
+
+```{python}
+# New DataFrame
+data = job_data['skills_req']
+
+# Step 1: Split the skills into individual items
+data["Skills_Split"] = job_data['skills_req'].apply(lambda x: [skill.strip() for skill in x.split("\n")])
+
+print(f"{data} \n")
+
+# Step 2: Flatten the list of skills
+all_skills = [skill for skills in data["Skills_Split"] for skill in skills]
+
+print(all_skills)
+
+# Step 3: Count the frequency of each skill
+skill_counts = pd.Series(all_skills).value_counts().reset_index()
+skill_counts.columns = ["Skill", "Count"]
+
+print(f" \n {skill_counts}")
+
+# Step 4: Create a bar chart
+fig = px.bar(
+    skill_counts.query('Count >=5'), 
+    x="Skill", 
+    y="Count", 
+    title="Frequency of Skills", 
+    labels={"Skill": "Skill", "Count": "Frequency"},
+    color="Skill"
+)
+
+fig.show()
+
+skill_counts.query('Count >=5')
+```

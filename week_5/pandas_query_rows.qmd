@@ -1,0 +1,182 @@
+
+```{python}
+import pandas as pd
+```
+
+```{python}
+yaounde = pd.read_csv("../data/yaounde_data.csv")
+```
+
+# a smaller subset of variables
+
+```{python}
+yao = yaounde[
+    [
+        "age",
+        "sex",
+        "weight_kg",
+        "neighborhood",
+        "occupation",
+        "symptoms",
+        "is_smoker",
+        "is_pregnant",
+        "igg_result",
+        "igm_result",
+    ]
+]
+yao.head()
+```
+
+# Introduce query
+
+
+```{python}
+yao.query("sex == 'Male'")
+```
+```{python}
+# Get the number of rows that fulfill the criterion
+yao.query("sex == 'Male'").shape[0]
+```
+
+Queries do not modify the dataframe itself, you need to create a new object/variable
+
+# Practice Q: Subset for pregnant respondents
+
+
+```{python}
+yao_pregnant = yao.query('is_pregnant == "Yes"')
+```
+
+# Relational operators
+
+
+```{python}
+yao.query('sex == "Female"')  # keep rows where `sex` is female
+yao.query('sex != "Male"')  # keep rows where `sex` is not "Male"
+yao.query("age < 6")  # keep respondents under 6
+yao.query("age >= 70")  # keep respondents aged at least 70
+
+# keep respondents whose neighbourhood is "Tsinga" or "Messa"
+yao.query('neighborhood.isin(["Tsinga", "Messa"])')
+```
+
+# Practice Q: relational operators
+
+
+```{python}
+yao_children = yao.query("age < 18")
+yao_children
+
+yao_carriere_ekoudou = yao.query('neighborhood.isin(["Carriere", "Ekoudou"])')
+yao_carriere_ekoudou
+```
+
+# Accessing external variables
+
+
+```{python}
+min_age = 25
+
+yao.query('age >= @min_age')
+```
+
+# Practice Q: subset for young respondents
+
+```{python}
+max_age = 30
+
+yao_young = yao.query("age <= @max_age")
+yao_young
+```
+
+# Combing conditions
+
+```{python}
+yao.query("age < 18 | age > 65") # age less than 18 or greater than 65
+```
+
+```{python}
+# either pregnant or ex-smokers
+yao.query("is_pregnant == 'Yes' | is_smoker == 'Ex-smoker'")
+```
+```{python}
+# pregnant And an ex-smoker
+yao.query("is_pregnant == 'Yes' & is_smoker == 'Ex-smoker'")
+```
+
+```{python}
+# get unique values in columns
+yao.is_smoker.value_counts()
+```
+
+# Practice Q: subset for IGG positive men
+
+```{python}
+yao_igg_positive_men = yao.query("sex == 'Male' & igg_result == 'Positive'")
+yao_igg_positive_men
+```
+
+# Negating conditions with the ~ operator
+
+```{python}
+yao.query("~(occupation == 'Student')") # return individuals who do not fulfill the condition
+```
+
+```{python}
+# equivalent to:
+yao.query("occupation != 'Student'")
+```
+
+```{python}
+yao.query(" ~ (age<18 | weight_kg<30)")
+```
+
+# Practice Q: drop smokers and drop those above 50
+
+```{python}
+yao_dropped = yao.query(" ~ (age > 50 | is_smoker == 'Smoker')")
+yao_dropped
+```
+
+# Nan values
+
+```{python}
+# yao.query("is_pregnant == 'Nan'") this does not work
+
+# use the following
+yao.query("is_pregnant.isna()")
+```
+```{python}
+yao.query("is_pregnant.notna()")
+```
+
+# Practice Q: keep missing smoking status
+
+
+```{python}
+yao.query("is_smoker.isna()")
+```
+
+# Querying based on string patterns
+
+```{python}
+yao.occupation.value_counts()
+```
+
+```{python}
+yao.query("occupation.str.contains('Student')") # values containing the string Student
+```
+
+```{python}
+yao.query(" ~ occupation.str.contains('Student')") # values not containing the string Student
+```
+
+```{python}
+yao.query("occupation.str.contains('Student|Farmer')") # contains Student or Farmer
+```
+
+# Practice Q: symptoms
+
+```{python}
+yao.query("symptoms.str.contains('Cough|Fever')")
+```

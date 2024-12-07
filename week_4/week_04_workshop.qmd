@@ -1,0 +1,56 @@
+---
+title: "India TB Pathways Analysis"
+format: 
+    html:
+        embed-resources: true
+author: "James Matosse"
+execute: 
+  echo: false
+---
+
+
+```{python}
+import pandas as pd
+import plotly.express as px
+from itables import show
+import numpy as np
+```
+
+#  Introduction
+ The India TB Pathways dataset is based on a study conducted in Vellore district, Tamil Nadu, India. It examines the pre-diagnostic costs and health-seeking behavior of 880 new adult pulmonary tuberculosis patients registered at Primary Health Centres (PHCs).
+
+## The data tabulated
+```{python}
+dat1 = pd.read_csv("../data/india_tb_pathways_and_costs.csv")
+```
+
+
+```{python}
+show(dat1)
+```
+
+## The Tamil Nadu map
+![Map of Tamil Nadu, India. Vellore district in the north-east is where the study was conducted.](undefined - Imgur.png)
+
+# Data visualised
+
+```{python}
+
+px.box(dat1, x = "Treatment initiation delay (in days)", color= "Education", title= "Distribution of treatment delays per Education group")
+```
+
+## Insights from the Box plots
+The Graduate & Above group has the smallest range of delays from 2 to 4 days with a median at 3 days. This group receives their treatment the quickest, which shows that maybe they are more aware of their health and/or that the society/clinics treats the elderly and respected persons first before other groups. The missing group has the lowest median of 2.5 day, but since this is the group that did not indicate their education level, it can be ignored. No Education group has the highest delays with the upper fence at 25 days and outliers reaching maximum at 65 days. The Middle group has two extreme outliers at 98 and 110 days delay while the median is at 6 days.
+
+
+```{python}
+smoker= dat1.Smoking.mode()[0]
+avg_bmi = round(float(dat1.bmi.mean()),2)
+min_bmi = int(dat1.bmi.min())
+max_bmi = int(dat1.bmi.max())
+#dat1.columns
+```
+
+# Inline Code challenge
+
+Most of the patients answered **`{python} smoker`** for smoking and the average bmi is **`{python} avg_bmi`** across all patients with the lowest bmi at **`{python} min_bmi`** and maximum at **`{python} max_bmi`**.

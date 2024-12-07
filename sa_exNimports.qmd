@@ -1,0 +1,50 @@
+
+# Load the sheet content to inspect its structure
+
+```{python}
+import pandas as pd
+data = pd.read_excel('data/Export and Import Unit Value Indices 2016 to 2024.xlsx', sheet_name='Export and Import Unit Value In')
+
+```
+
+# Display the first few rows to understand the data
+
+```{python}
+import plotly.express as px
+data.head(3)
+px.histogram(data, y='H04', x=['MO012016', 'MO012023', 'MO012024'])
+```
+
+```{python}
+#import pandas as pd
+#import plotly.express as px
+
+# Truncate function
+def truncate_label(label, max_length=10):
+    return label[:max_length] + "..." if len(label) > max_length else label
+
+# Apply truncation to the `H05` column
+data['H05_truncated'] = data['H05'].apply(lambda x: truncate_label(x, max_length=15))
+
+# Create the histogram
+fig = px.histogram(
+    data.query('H04 == "Imports"'), 
+    y='H05_truncated', 
+    x=['MO012016', 'MO012023', 'MO012024'],
+    barmode='relative'
+)
+
+# Update layout for better readability
+fig.update_layout(
+    yaxis_title="Shortened H05 Labels",
+    xaxis_title="Yearly Values",
+    title="Histogram with Truncated Labels"
+)
+
+# Show the plot
+fig.show()
+
+```
+```{python}
+px.histogram(data.query('H04 == "Imports"'), y='H05', x=['MO012016', 'MO012023', 'MO012024'])
+```
