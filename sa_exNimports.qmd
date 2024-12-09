@@ -1,16 +1,30 @@
+---
+title: "South Africa's Exports and Imports from Stats SA"
+author: 'James Matosse'
+format: 'html'
+---
+
+# Introduction
+
+Analysis of the South Africa's exports and imports behaviours with the data gathered by Stats SA. The purpose of the analysis is showcase the skills acquired through courses and training I've been involved and/or privy to attend over the last two years.
 
 # Load the sheet content to inspect its structure
 
+The downloaded data is in an excel spreadsheet and ranges from 2016 to 2024.
+
 ```{python}
 import pandas as pd
+import plotly.express as px
+
 data = pd.read_excel('data/Export and Import Unit Value Indices 2016 to 2024.xlsx', sheet_name='Export and Import Unit Value In')
 data
 ```
 
+The read data has 67 rows and 112 columns, it is cleary a wide dataset.
 
 ## Data cleaning
 
-First we melt the wide data to easily perform data analysis. Columns H01, H02, H17, H18 and H25 can be removed. The observations were collected on a monthly bases. The December 2020 was used as the baseline for all the observations.
+First, melt the wide data to easily perform data analysis. Columns H01, H02, H17, H18 and H25 can be removed. The observations were collected on a monthly bases. The December 2020 was used as the baseline for all the observations.
 
 ```{python}
 data_long = data.melt(id_vars=['H01', 'H02', 'H03', 'H04', 'H05', 'H17', 'H18', 'H25'], var_name='Date', value_name='Amount')
@@ -18,36 +32,41 @@ clean_data = data_long.drop(columns=['H01', 'H02','H17', 'H18', 'H25'])
 clean_data
 ```
 
+Reduce the categories 
+
 ## Plot the data
 
+The clean_data is now a long dataset with 6968 rows and 5 columns; the "Date" column contains the month and year for each observation. But the "Date" needs to be cleaned further for timeseries analysis, which will be done later. For now, let's plot the "Amount", "H04" and "H05" columns and draw some interprentations.
+
 ```{python}
-import plotly.express as px
-data.head(3)
-px.histogram(clean_data, y='H04', x='Amount', color='H04')
+px.histogram(clean_data, y='H04', x='Amount', color='H04', title= "South Africa's Exports and Imports Summary")
 ```
 
-```{python}
+The bar plot above indicate that the imports exceeds the exports by 50k of the unit value. Now, let's look at the subcategories for each imports and exports.
 
+```{python}
 # Truncate function
 def truncate_label(label, max_length=10):
     return label[:max_length] + "..." if len(label) > max_length else label
 
 # Apply truncation to the `H05` column
-clean_data['H05_truncated'] = clean_data['H05'].apply(lambda x: truncate_label(x, max_length=15))
+clean_data['H05_truncated'] = clean_data['H05'].apply(lambda x: truncate_label(x, max_length=25))
+
+print(clean_data)
 
 # Create the histogram
 fig = px.histogram(
     clean_data.query('H04 == "Imports"'), 
     y='H05_truncated', 
     x='Amount',
-    barmode='relative'
+    barmode='relative',
 )
 
 # Update layout for better readability
 fig.update_layout(
-    yaxis_title="Shortened H05 Labels",
-    xaxis_title="Yearly Values",
-    title="Histogram with Truncated Labels"
+    yaxis_title="Imports categories",
+    xaxis_title="Sum of Amount",
+    title="South African Imports for the 8 Years Period"
 )
 
 # Show the plot
@@ -60,11 +79,30 @@ fig1 = px.histogram(clean_data.query('H04 == "Exports"'), y='H05_truncated', x='
 
 # Update layout for better readability
 fig1.update_layout(
-    yaxis_title="Shortened H05 Labels",
-    xaxis_title="Yearly Values",
-    title="Histogram with Truncated Labels"
+    yaxis_title="Exports categories",
+    xaxis_title="Sum of Amount",
+    title="South African Exports for the 8 Years Period"
 )
 
 # Show the plot
 fig1.show()
+```
+
+Other transportable goods is the highest category imported with a sum of 21.5k of unit value followed by crude petroleum at 14.4k of unit value. Whilst coal on the other hand is the highest category exported with a sum of 15.4k unit value, followed by coke oven at 12.8k unit value.
+
+## Timeseries analysis
+
+
+```{python}
+# Extract month and year, and convert to datetime
+clean_data['datetime'] = pd.to_datetime(clean_data['Date'].str[2:], format='%m%Y')
+clean_data.query('H05_truncated == "All items"')
+```
+
+```{python}
+px.line(clean_data.query('H04 == "Imports"'), x='datetime', y='Amount', color='H05_truncated')
+```
+
+```{python}
+px.line(clean_data.query('H04 == "Exports"'), x='datetime', y='Amount', color='H05_truncated')
 ```
