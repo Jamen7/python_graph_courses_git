@@ -1,0 +1,87 @@
+---
+title: "Dashboarding practice"  
+format: dashboard   
+---
+
+```{python}
+import pandas as pd
+import plotly.express as px
+
+# Load the data
+p = px.line(y=[1, 2, 3])
+tips = px.data.tips()
+num_col = tips.shape[1]
+num_row = tips.shape[0]
+
+b = px.histogram(tips, x='day', y='tip')
+
+```
+
+# Layout
+
+## Row 1 {height=30%}
+
+::: {.valuebox icon="heart" color="#1E91FF" title="Number of Columns"}
+
+`{python} num_col`
+
+small columns
+
+:::
+
+::: {.valuebox icon="arrow-down" color="#87CEFA" title="Number of Rows"} 
+
+`{python} num_row`
+
+many rows
+
+:::
+
+::: {.valuebox icon="graph-up" color="#4382B4" title="third box"}
+
+1
+
+:::
+
+## Row 2 {height=60%}
+
+### {width=70%}
+
+```{python}
+p
+```
+
+### {width=40%}
+
+```{python}
+b
+```
+
+# tabs
+
+## Row 1 {height=30%}
+
+```{python}
+p
+
+```
+
+## Row 2 {height=70%}
+
+### Column {width="80%"}
+
+```{python}
+b
+```
+
+### Column {.tabset width="20%"}
+
+#### Tab 1
+
+Hello world, goodnight moon!
+
+#### Tab 2
+
+```{python}
+1 + 1
+```
