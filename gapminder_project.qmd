@@ -1,0 +1,167 @@
+---
+title: "Statistics Dashboard with Quarto"
+
+author: "James Matosse"
+---
+
+# Introduction
+
+## Datasets
+
+Three datasets were downloaded from the Gapminder; "child mortality", "woman fertilty", "females employment rate"
+
+### Imports
+```{python}
+import pandas as pd
+import plotly.express as px
+import numpy as np
+from itables import show
+import country_converter as coco
+```
+
+
+```{python}
+child_mortality = pd.read_csv("data/child_mortality_0_5_year_olds_dying_per_1000_born.csv")
+child_mortality
+```
+
+The imported dataset is in a wide format, for data analysis it will be converted to a long format with only three columns; "country", "year" and "mortality".
+Child mortality is for 0 to 5 year olds dying per 1000 born.
+
+
+```{python}
+child_mortality_long = child_mortality.melt(id_vars='country', var_name= 'year', value_name='mortality')
+child_mortality_long
+```
+
+The data has observations from the year 1800 to current and projections to year 2100. The analysis will focus on 1991 to 2019 data.
+
+```{python}
+child_mortality_long['country'] = child_mortality_long['country'].replace({'UAE': 'United Arab Emirates'})
+
+child_mortality_long['country_code'] = coco.convert(child_mortality_long["country"], to='ISO3')
+```
+
+```{python}
+child_mortality_long['year'] = child_mortality_long['year'].astype(int)
+
+child_subset = child_mortality_long.query('year >= 1991 and year <= 2019')
+child_subset
+```
+
+
+```{python}
+px.line(child_subset.query('country == ["China", "Egypt", "Australia", "Argentina"]'), x= 'year', y='mortality', color='country', title= 'The Child Mortality from 1991 to 2019')
+```
+
+
+```{python}
+child_subset["continent"] = child_subset["country"].apply(lambda x: coco.convert(names=x, to='continent'))
+```
+
+
+```{python}
+highest_mortality = child_subset.loc[child_subset.groupby("continent")["mortality"].idxmax()].sort_values(
+    ["mortality"], ascending=False
+) 
+```
+
+
+```{python}
+lowest_mortality = child_subset.loc[child_subset.groupby("continent")["mortality"].idxmin()].sort_values(
+    ["mortality"], ascending=True
+) 
+
+fig = px.bar(lowest_mortality, x='continent', y= 'mortality', color='country', title='Lowest Child Mortality per Continent in 2019')
+```
+
+# Women's fertility Analaysis
+
+## Fertility dataset
+
+```{python}
+fertility_wide = pd.read_csv("data/children_per_woman_total_fertility.csv")
+fertility_wide
+```
+
+```{python}
+fertility_long = fertility_wide.melt(id_vars='country', var_name='year', value_name='woman_fertility')
+fertility_long
+```
+
+```{python}
+fertility_long['country'] = fertility_long['country'].replace({'UAE': 'United Arab Emirates'})
+
+fertility_long['country_code'] = coco.convert(fertility_long["country"], to='ISO3')
+
+fertility_long['year'] = fertility_long['year'].astype(int)
+```
+
+```{python}
+fertility_sub = fertility_long.query('year >= 1991 and year <= 2019')
+# Merged datasets
+child_fertility = pd.merge(child_subset,fertility_sub, on=['country_code','year'], how='left',)
+
+child_fertility = child_fertility.drop(columns='country_y').rename(columns={'country_x': 'country'})
+child_fertility
+```
+
+```{python}
+col_list = list(child_fertility.columns)
+
+col_list.insert(1, col_list.pop(3))  # Pop the 4th column (index 3) and insert at the 2nd
+child_fertility = child_fertility[col_list]
+child_fertility
+# col_list.insert([1,end], col_list.pop([3,4])) try it for the continent as well 
+```
+
+```{python}
+px.line(child_fertility.query('country == ["China", "Egypt", "Australia", "Argentina"]'), x= 'year', y='woman_fertility', color='country', title= "The Women's from 1991 to 2019")
+```
+
+```{python}
+#For plotting both 'mortality','woman_fertility' on the same graph
+
+# Assuming `child_subset` is your DataFrame
+
+# Filter the data for China
+#china_data = child_subset.query('country == "China"')
+
+# Reshape the data to long format
+#long_data = china_data.melt(id_vars=['year', 'country'], 
+#                            value_vars=['mortality', 'woman_fertility'], 
+#                            var_name='Metric', 
+#                            value_name='Value')
+
+# Plot using Plotly Express
+#fig = px.line(
+#    long_data,
+#    x='year',
+#    y='Value',
+#    color='Metric',  # Use `Metric` to differentiate between 'mortality' and 'woman_fertility'
+#    title='The Child Mortality and Woman Fertility from 1991 to 2019 in China'
+#)
+
+#fig.show()
+
+```
+
+## Female Employment Rate
+
+```{python}
+employ_wide = pd.read_csv("data/females_aged_15plus_employment_rate_percent.csv")
+employ_wide
+```
+
+```{python}
+employ_long = employ_wide.melt(id_vars='country', var_name='year', value_name='employment_rate')
+employ_long
+```
+
+```{python}
+show(highest_mortality)
+```
+
+```{python}
+fig.show()
+```

@@ -1,5 +1,5 @@
 ---
-title: "Dashboarding practice"  
+title: "Gapminder 2007"  
 format: dashboard   
 ---
 
@@ -19,7 +19,7 @@ b = px.histogram(tips, x='day', y='tip')
 
 # Layout
 
-## Row 1 {height=30%}
+## Row 1 Value boxes {height=20%}
 
 ::: {.valuebox icon="heart" color="#1E91FF" title="Number of Columns"}
 
@@ -43,7 +43,7 @@ many rows
 
 :::
 
-## Row 2 {height=60%}
+## Row 2 
 
 ### {width=70%}
 
@@ -51,20 +51,30 @@ many rows
 p
 ```
 
-### {width=40%}
+### {width=30%}
 
 ```{python}
 b
 ```
 
-# tabs
+# Tabsets
 
 ## Row 1 {height=30%}
+
+### column {width="50%"}
 
 ```{python}
 p
 
 ```
+
+### column 
+
+```{python}
+p
+
+```
+
 
 ## Row 2 {height=70%}
 
