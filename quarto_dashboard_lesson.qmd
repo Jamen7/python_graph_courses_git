@@ -19,7 +19,7 @@ b = px.histogram(tips, x='day', y='tip')
 
 # Layout
 
-## Row 1 Value boxes {height=20%}
+## Row 1 Value boxes {height=30%}
 
 ::: {.valuebox icon="heart" color="#1E91FF" title="Number of Columns"}
 
