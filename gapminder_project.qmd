@@ -53,7 +53,14 @@ child_subset
 Plotting selected countries' child mortality
 
 ```{python}
-px.line(child_subset.query('country == ["China", "Egypt", "Australia", "Argentina"]'), x= 'year', y='mortality', color='country', title= 'The Child Mortality from 1991 to 2019')
+px.line(child_subset
+    .query(
+        'country == ["China", "Egypt", "Australia", "Argentina"]'), 
+    x= 'year', 
+    y='mortality', 
+    color='country', 
+    title= 'The Child Mortality from 1991 to 2019'
+    )
 ```
 
 The time series show that Egypt has the highest child mortality that was 81.5 in 1991 and drop to 20.5 in 2019 while Australia is the lowest, ranging from 8.66 to 5.59, respectively.
@@ -66,15 +73,19 @@ child_subset["continent"] = child_subset["country"].apply(lambda x: coco.convert
 The **continent** variable can now be used for groupings.
 
 ```{python}
-highest_mortality = child_subset.loc[child_subset.groupby("continent")["mortality"].idxmax()].sort_values(
-    ["mortality"], ascending=False
+highest_mortality = (
+    child_subset
+    .loc[child_subset.groupby("continent")["mortality"].idxmax()]
+    .sort_values(["mortality"], ascending=False)
 ) 
 ```
 
 
 ```{python}
-lowest_mortality = child_subset.loc[child_subset.groupby("continent")["mortality"].idxmin()].sort_values(
-    ["mortality"], ascending=True
+lowest_mortality = (
+    child_subset
+    .loc[child_subset.groupby("continent")["mortality"].idxmin()]
+    .sort_values(["mortality"], ascending=True)
 ) 
 
 fig = px.bar(lowest_mortality, x='continent', y= 'mortality', color='country', title='Lowest Child Mortality per Continent in 2019')
@@ -131,10 +142,19 @@ child_fertility
 Plotting the women's fertility for similar countries as before, the child mortality was used as the size of the bubbles
 
 ```{python}
-px.scatter(child_fertility.query('country == ["China", "Egypt", "Australia", "Argentina"]'), x= 'year', y='woman_fertility', color='country', title= "The Women's fertility from 1991 to 2019", size='mortality')
+px.scatter(child_fertility
+.query('country == ["China", "Egypt", "Australia", "Argentina"]'), 
+x= 'year', 
+y='woman_fertility', 
+color='country', 
+title= "The Women's fertility from 1991 to 2019", 
+size='mortality')
 ```
 
-The women's fertility for China and Australia are below 2 for the whole range except for Australia in 2008 which was an unusual and significant demographic occurrence according to ChatGTP
+The women's fertility for China and Australia are below 2 for the whole range except for Australia in 2008 which 
+was an unusual and significant demographic occurrence according to ChatGTP. Argentina's fertility has been 
+dropping from 3.01 in 1991 and in 2019 it crossed the 2.0 line to 1.88 which means the population growth 
+will decrease.
 
 ```{python}
 #For plotting both 'mortality','woman_fertility' on the same graph
@@ -170,6 +190,24 @@ fig1.show()
 
 ```
 
+```{python}
+highest_fertility = (
+    child_fertility
+    .loc[child_fertility.groupby("continent")["woman_fertility"].idxmax()]
+    .sort_values(["woman_fertility"], ascending=False)
+) 
+```
+
+
+```{python}
+lowest_fertility = (
+    child_fertility
+    .loc[child_fertility.groupby("continent")["woman_fertility"].idxmin()]
+    .sort_values(["woman_fertility"], ascending=True)
+) 
+
+```
+
 ## Female Employment Rate
 
 ```{python}
@@ -199,7 +237,15 @@ employ_child_fert
 ```
 
 ```{python}
-px.scatter(employ_child_fert.query('country == ["China", "Egypt", "Australia", "Argentina"]'), y= 'mortality', x='woman_fertility', color='country', title= "The Women's fertility from 1991 to 2019", size='employment_rate',facet_col='country')
+px.scatter(employ_child_fert
+.query('country == ["China", "Egypt", "Australia", "Argentina"]'), 
+y= 'mortality', 
+x='woman_fertility', 
+color='country', 
+title= "The Women's fertility vs child mortality from 1991 to 2019", 
+size='employment_rate',
+facet_col='country'
+)
 ```
 
 ```{python}
@@ -325,6 +371,41 @@ for i, country in enumerate(countries):
 
 # Show the figure
 fig3.show()
+
+```
+
+```{python}
+px.line(employ_child_fert
+    .query(
+        'country == ["China", "Egypt", "Australia", "Argentina"]'), 
+    x= 'year', 
+    y='employment_rate', 
+    color='country', 
+    title= 'The Female Employment Rate from 1991 to 2019'
+    )
+```
+
+China's employment rate for women has been decreasing from 71.6% from 1991
+steadily to 2000 then followed by few steep declines that led to 58.2% in 2019, 
+while Australia's rate has been increasing from 46.6% to 57.7%. Egypt has the lowest 
+employment rate ranging between 14.3 to 18.6 for the duration.
+
+```{python}
+highest_employ = (
+    employ_child_fert
+    .loc[employ_child_fert.groupby("continent")["employment_rate"].idxmax()]
+    .dropna()  # Remove rows with NaN values
+    .sort_values(["employment_rate"], ascending=False)
+) 
+```
+
+
+```{python}
+lowest_employ = (
+    employ_child_fert
+    .loc[employ_child_fert.groupby("continent")["employment_rate"].idxmin()]
+    .sort_values(["employment_rate"], ascending=True)
+) 
 
 ```
 
