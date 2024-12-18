@@ -1,6 +1,6 @@
 ---
 title: "Statistics Dashboard with Quarto"
-
+format: html
 author: "James Matosse"
 ---
 
@@ -11,6 +11,7 @@ author: "James Matosse"
 Three datasets were downloaded from the Gapminder; "child mortality", "woman fertilty", "females employment rate"
 
 ### Imports
+
 ```{python}
 import pandas as pd
 import plotly.express as px
@@ -25,70 +26,113 @@ child_mortality = pd.read_csv("data/child_mortality_0_5_year_olds_dying_per_1000
 child_mortality
 ```
 
+```{python}
+# Subset the data to include `country`, `1999`, and `2019` columns only.
+table_df = child_mortality[['country', '1999', '2019']]
+table_df = table_df.rename(columns={'country': 'Country/area'})
+
+# Calculate absolute change as the difference between 2019 and 1999
+table_df["Absolute Change"] = table_df['2019'] - table_df['1999']
+
+# Calculate relative change as the absolute change divided by the 2000 emissions, then multiplied by 100
+table_df["Relative Change"] = ((table_df['2019'] - table_df['1999']) / table_df['1999']) * 100
+
+# Round to 0 decimal places, and add a % sign to the relative change
+table_df["Relative Change"] = table_df["Relative Change"].round(0).astype(str) + "%"
+```
+
 The imported dataset is in a wide format, for data analysis it will be converted to a long format with only three columns; "country", "year" and "mortality".
 Child mortality is for 0 to 5 year olds dying per 1000 born.
 
 
 ```{python}
-child_mortality_long = child_mortality.melt(id_vars='country', var_name= 'year', value_name='mortality')
+child_mortality_long = child_mortality.melt(
+    id_vars="country", var_name="year", value_name="mortality"
+)
 child_mortality_long
 ```
 
 The data has observations from the year 1800 to current and projections to year 2100. The analysis will focus on 1991 to 2019 data.
 
 ```{python}
-child_mortality_long['country'] = child_mortality_long['country'].replace({'UAE': 'United Arab Emirates'})
+child_mortality_long["country"] = child_mortality_long["country"].replace(
+    {"UAE": "United Arab Emirates"}
+)
 
 # Convert 'country' to a 'country code' and add it as a new variable
-child_mortality_long['country_code'] = coco.convert(child_mortality_long["country"], to='ISO3')
+child_mortality_long["country_code"] = coco.convert(
+    child_mortality_long["country"], to="ISO3"
+)
 ```
 
 ```{python}
 child_mortality_long['year'] = child_mortality_long['year'].astype(int)
 
 child_subset = child_mortality_long.query('year >= 1991 and year <= 2019')
+
+```
+
+```{python}
+# Creates continent variable to the assigned country
+child_subset["continent"] = child_subset["country"].apply(
+    lambda x: coco.convert(names=x, to="continent")
+)
+```
+
+```{python}
 child_subset
 ```
 
 Plotting selected countries' child mortality
 
 ```{python}
-px.line(child_subset
-    .query(
-        'country == ["China", "Egypt", "Australia", "Argentina"]'), 
-    x= 'year', 
-    y='mortality', 
-    color='country', 
-    title= 'The Child Mortality from 1991 to 2019'
-    )
+px.line(
+    child_subset.query('country == ["China", "Egypt", "Australia", "Argentina"]'),
+    x="year",
+    y="mortality",
+    color="country",
+    title="The Child Mortality from 1991 to 2019",
+)
 ```
 
 The time series show that Egypt has the highest child mortality that was 81.5 in 1991 and drop to 20.5 in 2019 while Australia is the lowest, ranging from 8.66 to 5.59, respectively.
 
-```{python}
-# Creates continent variable to the assigned country 
-child_subset["continent"] = child_subset["country"].apply(lambda x: coco.convert(names=x, to='continent'))
-```
-
 The **continent** variable can now be used for groupings.
 
 ```{python}
-highest_mortality = (
-    child_subset
-    .loc[child_subset.groupby("continent")["mortality"].idxmax()]
-    .sort_values(["mortality"], ascending=False)
-) 
+highest_mortality = child_subset.loc[
+    child_subset.groupby("continent")["mortality"].idxmax()
+    ].sort_values(["mortality"], ascending=False)
+
 ```
 
 
 ```{python}
-lowest_mortality = (
-    child_subset
-    .loc[child_subset.groupby("continent")["mortality"].idxmin()]
-    .sort_values(["mortality"], ascending=True)
-) 
+lowest_mortality = child_subset.loc[
+    child_subset.groupby("continent")["mortality"].idxmin()
+    ].sort_values(["mortality"], ascending=True)
 
-fig = px.bar(lowest_mortality, x='continent', y= 'mortality', color='country', title='Lowest Child Mortality per Continent in 2019')
+fig = px.bar(
+    lowest_mortality,
+    x="continent",
+    y="mortality",
+    color="country",
+    title="Lowest Child Mortality per Continent in 2019",
+    labels={'mortality': 'Child Mortality', 'continent': 'Continent'}
+)
+```
+
+```{python}
+# Create the map using plotly express with a blue color scale
+map_fig = px.choropleth(
+    child_subset,
+    locations="country_code",
+    color="mortality",
+    hover_name="country",
+    animation_frame="year",
+    title="Map of Countries by Child Mortality",
+    color_continuous_scale="Reds",
+).update_layout(coloraxis_showscale=True)
 ```
 
 # Women's fertility Analaysis
@@ -101,28 +145,39 @@ fertility_wide
 ```
 
 ```{python}
-fertility_long = fertility_wide.melt(id_vars='country', var_name='year', value_name='woman_fertility')
+fertility_long = fertility_wide.melt(
+    id_vars="country", var_name="year", value_name="woman_fertility"
+)
 fertility_long
 ```
 
 Replace UAE since coco will not recognise it and will issue an error for each year.
 
 ```{python}
-fertility_long['country'] = fertility_long['country'].replace({'UAE': 'United Arab Emirates'})
+fertility_long["country"] = fertility_long["country"].replace(
+    {"UAE": "United Arab Emirates"}
+)
 
-fertility_long['country_code'] = coco.convert(fertility_long["country"], to='ISO3')
+fertility_long["country_code"] = coco.convert(fertility_long["country"], to="ISO3")
 
-fertility_long['year'] = fertility_long['year'].astype(int)
+fertility_long["year"] = fertility_long["year"].astype(int)
 ```
 
 Query fertility from 1991 to 2019 as with the child mortality subset, then merge the 'woman fertifily' variable to the child_subset using the country_code and year together applying a left join.
 
 ```{python}
-fertility_sub = fertility_long.query('year >= 1991 and year <= 2019')
+fertility_sub = fertility_long.query("year >= 1991 and year <= 2019")
 # Merged datasets
-child_fertility = pd.merge(child_subset,fertility_sub, on=['country_code','year'], how='left',)
+child_fertility = pd.merge(
+    child_subset,
+    fertility_sub,
+    on=["country_code", "year"],
+    how="left",
+)
 
-child_fertility = child_fertility.drop(columns='country_y').rename(columns={'country_x': 'country'})
+child_fertility = child_fertility.drop(columns="country_y").rename(
+    columns={"country_x": "country"}
+)
 child_fertility
 ```
 
@@ -131,9 +186,13 @@ Re-ordering of the columns' variables
 ```{python}
 col_list = list(child_fertility.columns)
 
-col_list.insert(1, col_list.pop(3))  # Pop the 4th column (index 3) and insert at the 2nd
+col_list.insert(
+    1, col_list.pop(3)
+)  # Pop the 4th column (index 3) and insert at the 2nd
 col_list
-col_list.insert(2, col_list.pop(4))  # Pop the 5th column (index 4) and insert at the 3rd
+col_list.insert(
+    2, col_list.pop(4)
+)  # Pop the 5th column (index 4) and insert at the 3rd
 child_fertility = child_fertility[col_list]
 child_fertility
 
@@ -142,48 +201,55 @@ child_fertility
 Plotting the women's fertility for similar countries as before, the child mortality was used as the size of the bubbles
 
 ```{python}
-px.scatter(child_fertility
-.query('country == ["China", "Egypt", "Australia", "Argentina"]'), 
-x= 'year', 
-y='woman_fertility', 
-color='country', 
-title= "The Women's fertility from 1991 to 2019", 
-size='mortality')
+fig_fert = px.scatter(
+    child_fertility.query('country == ["China", "Egypt", "Australia", "Argentina"]'),
+    x="year",
+    y="woman_fertility",
+    color="country",
+    title="The Women's fertility from 1991 to 2019",
+    size="mortality",
+)
 ```
 
-The women's fertility for China and Australia are below 2 for the whole range except for Australia in 2008 which 
-was an unusual and significant demographic occurrence according to ChatGTP. Argentina's fertility has been 
-dropping from 3.01 in 1991 and in 2019 it crossed the 2.0 line to 1.88 which means the population growth 
-will decrease.
+The women's fertility for China and Australia are below 2 for the whole range except for Australia in 2008 which  was an unusual and significant demographic occurrence according to ChatGTP. Argentina's fertility has been  dropping from 3.01 in 1991 and in 2019 it crossed the 2.0 line to 1.88 which means the population growth will decrease.
 
 ```{python}
-#For plotting both 'mortality','woman_fertility' on the same graph
+# For plotting both 'mortality','woman_fertility' on the same graph
 
 # Filter the data for China
 china_data = child_fertility.query('country == "China"')
 
+
 def reshape_country(country):
-    data = child_fertility.query('country == @country')
-    long_data = data.melt(id_vars=['year', 'country'], value_vars=['mortality', 'woman_fertility'], var_name='Metric', value_name='Value')
+    data = child_fertility.query("country == @country")
+    long_data = data.melt(
+        id_vars=["year", "country"],
+        value_vars=["mortality", "woman_fertility"],
+        var_name="Metric",
+        value_name="Value",
+    )
     return long_data
 
-reshape_country('China')
+
+reshape_country("China")
 
 
 # List of countries
 countries = ["China", "Egypt", "Australia", "Argentina"]
 
 # Reshape data for all countries and combine
-reshaped_data = pd.concat([reshape_country(country) for country in countries], ignore_index=True)
+reshaped_data = pd.concat(
+    [reshape_country(country) for country in countries], ignore_index=True
+)
 
 # Plot using Plotly Express
 fig1 = px.line(
     reshaped_data,
-    x='year',
-    y='Value',
-    color='Metric',  # Use `Metric` to differentiate between 'mortality' and 'woman_fertility'
-    title='The Child Mortality and Woman Fertility from 1991 to 2019 in China',
-    symbol='country'
+    x="year",
+    y="Value",
+    color="Metric",  # Use `Metric` to differentiate between 'mortality' and 'woman_fertility'
+    title="The Child Mortality and Woman Fertility from 1991 to 2019 in China",
+    symbol="country",
 )
 
 fig1.show()
@@ -191,20 +257,16 @@ fig1.show()
 ```
 
 ```{python}
-highest_fertility = (
-    child_fertility
-    .loc[child_fertility.groupby("continent")["woman_fertility"].idxmax()]
-    .sort_values(["woman_fertility"], ascending=False)
-) 
+highest_fertility = child_fertility.loc[
+    child_fertility.groupby("continent")["woman_fertility"].idxmax()
+].sort_values(["woman_fertility"], ascending=False)
 ```
 
 
 ```{python}
-lowest_fertility = (
-    child_fertility
-    .loc[child_fertility.groupby("continent")["woman_fertility"].idxmin()]
-    .sort_values(["woman_fertility"], ascending=True)
-) 
+lowest_fertility = child_fertility.loc[
+    child_fertility.groupby("continent")["woman_fertility"].idxmin()
+].sort_values(["woman_fertility"], ascending=True)
 
 ```
 
@@ -216,37 +278,49 @@ employ_wide
 ```
 
 ```{python}
-employ_long = employ_wide.melt(id_vars='country', var_name='year', value_name='employment_rate')
+employ_long = employ_wide.melt(
+    id_vars="country", var_name="year", value_name="employment_rate"
+)
 employ_long
 ```
 
 ```{python}
-employ_long['country'] = employ_long['country'].replace({'UAE': 'United Arab Emirates'})
-# Replace "Channel Islands" with "United Kingdom" 
-employ_long['country'] = employ_long['country'].replace('Channel Islands', 'United Kingdom')
+employ_long["country"] = employ_long["country"].replace({"UAE": "United Arab Emirates"})
+# Replace "Channel Islands" with "United Kingdom"
+employ_long["country"] = employ_long["country"].replace(
+    "Channel Islands", "United Kingdom"
+)
 
-employ_long['country_code'] = coco.convert(employ_long["country"], to='ISO3')
+employ_long["country_code"] = coco.convert(employ_long["country"], to="ISO3")
 
-employ_long['year'] = employ_long['year'].astype(int)
+employ_long["year"] = employ_long["year"].astype(int)
 ```
 
 ```{python}
-employ_child_fert = pd.merge(child_fertility,employ_long, on=['country_code','year'], how='left',)
-employ_child_fert = employ_child_fert.drop(columns='country_y').rename(columns={'country_x': 'country'})
+employ_child_fert = pd.merge(
+    child_fertility,
+    employ_long,
+    on=["country_code", "year"],
+    how="left",
+)
+employ_child_fert = employ_child_fert.drop(columns="country_y").rename(
+    columns={"country_x": "country"}
+)
 employ_child_fert
 ```
 
 ```{python}
-px.scatter(employ_child_fert
-.query('country == ["China", "Egypt", "Australia", "Argentina"]'), 
-y= 'mortality', 
-x='woman_fertility', 
-color='country', 
-title= "The Women's fertility vs child mortality from 1991 to 2019", 
-size='employment_rate',
-facet_col='country'
+px.scatter(
+    employ_child_fert.query('country == ["China", "Egypt", "Australia", "Argentina"]'),
+    y="mortality",
+    x="woman_fertility",
+    color="country",
+    title="The Women's fertility vs child mortality from 1991 to 2019",
+    size="employment_rate",
+    facet_col="country",
 )
 ```
+
 
 ```{python}
 import plotly.graph_objects as go
@@ -257,44 +331,60 @@ filtered_data = employ_child_fert.query('country == ["China", "Egypt", "Australi
 # Create the figure
 fig2 = go.Figure()
 
-# Add scatter plot for 'mortality' vs. 'woman_fertility'
+# Define a color mapping for consistency
+color_map = {
+    "China": "red",
+    "Egypt": "blue",
+    "Australia": "green",
+    "Argentina": "orange"
+}
+
+# Add scatter plot for 'mortality' vs. 'year' (y-axis 1)
 for country in filtered_data['country'].unique():
     country_data = filtered_data[filtered_data['country'] == country]
     fig2.add_trace(
         go.Scatter(
-            x=country_data['woman_fertility'],
+            x=country_data['year'],
             y=country_data['mortality'],
             mode='markers',
-            marker=dict(size=country_data['employment_rate']),
             name=f"{country} (Mortality)",
             legendgroup=country,
+            marker=dict(color=color_map[country]),  # Assign color
         )
     )
 
-# Add a secondary y-axis for the 'year' variable
+# Add a secondary y-axis for 'woman_fertility' (y-axis 2)
 for country in filtered_data['country'].unique():
     country_data = filtered_data[filtered_data['country'] == country]
     fig2.add_trace(
         go.Scatter(
-            x=country_data['woman_fertility'],
-            y=country_data['year'],
+            x=country_data['year'],
+            y=country_data['woman_fertility'],
             mode='lines',
-            name=f"{country} (Year)",
+            name=f"{country} (Women's Fertility)",
             yaxis='y2',
             showlegend=False,  # Avoid duplicate legends
+            line=dict(color=color_map[country])  # Assign matching color
         )
     )
 
 # Update layout to include a second y-axis
 fig2.update_layout(
-    title="The Women's Fertility from 1991 to 2019",
-    xaxis=dict(title="Women's Fertility"),
+    title="The Women's Fertility and Child Mortality from 1991 to 2019",
+    xaxis=dict(title="Year"),
     yaxis=dict(title="Mortality", side='left'),
     yaxis2=dict(
-        title="Year",
+        title="Women's Fertility",
         overlaying='y',
         side='right',
         showgrid=False
+    ),
+    legend=dict(
+        orientation='h',  # Horizontal orientation
+        yanchor='top',    # Anchor at the top of the legend box
+        y=-0.2,           # Position it below the plot (adjust as needed)
+        xanchor='center', # Center align the legend
+        x=0.5             # Place at the center of the plot horizontally
     ),
     legend_title="Country"
 )
@@ -303,6 +393,8 @@ fig2.update_layout(
 fig2.show()
 
 ```
+
+
 
 ```{python}
 #import plotly.graph_objects as go
@@ -320,30 +412,29 @@ fig3 = go.Figure()
 for i, country in enumerate(countries):
     country_data = filtered_data[filtered_data['country'] == country]
 
-    # Add scatter plot for 'mortality' vs. 'woman_fertility'
+    # Add scatter plot for 'woman_fertility' vs. 'year'
     fig3.add_trace(
         go.Scatter(
             x=country_data['year'],
-            y=country_data['mortality'],
+            y=country_data['woman_fertility'],
             mode='markers',
-            marker=dict(size=country_data['employment_rate']),
-            name=f"{country} (Mortality)",
+            name=f"{country} (Women's Fertility)",
             legendgroup=country,
-            showlegend=(i == 0),  # Show legend only for the first facet
+            showlegend=False, #(i <= 3),  # Show legend only for the first facet
             xaxis=f'x{i+1}',
             yaxis=f'y{i+1}'
         )
     )
 
-    # Add a secondary y-axis for 'year' in the same facet
+    # Add a secondary y-axis for 'employment_rate' in all facets
     fig3.add_trace(
         go.Scatter(
             x=country_data['year'],
-            y=country_data['woman_fertility'],
+            y=country_data['employment_rate'],
             mode='lines',
-            name=f"{country} (Women's Fertility)",
+            name=f"{country} (Employment Rate)",
             yaxis=f'y{i+1}2',  # Use a secondary y-axis
-            showlegend=False,  # No legend for year
+            showlegend=False,  # No duplicate legend
             xaxis=f'x{i+1}'
         )
     )
@@ -351,23 +442,44 @@ for i, country in enumerate(countries):
 # Update layout for facets
 num_countries = len(countries)
 fig3.update_layout(
-    title="Women's Fertility, Mortality, and Year (Faceted by Country)",
+    title="Women's Fertility and Employment Rate (Faceted by Country)",
     grid=dict(rows=1, columns=num_countries, pattern='independent'),  # Independent axes for each country
     margin=dict(t=50, b=50, l=50, r=50),
+    legend=dict(
+        orientation='h',  # Horizontal orientation
+        yanchor='top',    # Anchor at the top of the legend box
+        y=-0.2,           # Position it below the plot (adjust as needed)
+        xanchor='center', # Center align the legend
+        x=0.5             # Place at the center of the plot horizontally
+    ),
 )
 
 # Configure individual subplots
 for i, country in enumerate(countries):
+    # Add primary y-axis to all facets
     fig3.update_layout(**{
         f'xaxis{i+1}': dict(title="Year"),
-        f'yaxis{i+1}': dict(title="Mortality", side='left'),
-        f'yaxis{i+1}2': dict(
-            title="Year",
-            overlaying=f'y{i+1}',
-            side='right',
-            showgrid=False
-        )
+        f'yaxis{i+1}': dict(title="Women's Fertility", side='left'),
     })
+    # Configure secondary y-axis for all facets
+    if i == len(countries) - 1:  # Last facet column
+        fig3.update_layout(**{
+            f'yaxis{i+1}2': dict(
+                title="Employment Rate",  # Add title only in the last column
+                overlaying=f'y{i+1}',
+                side='right',
+                showgrid=False
+            )
+        })
+    else:
+        fig3.update_layout(**{
+            f'yaxis{i+1}2': dict(
+                overlaying=f'y{i+1}',
+                side='right',
+                showgrid=False,
+                title=None
+            )
+        })
 
 # Show the figure
 fig3.show()
@@ -385,10 +497,7 @@ px.line(employ_child_fert
     )
 ```
 
-China's employment rate for women has been decreasing from 71.6% from 1991
-steadily to 2000 then followed by few steep declines that led to 58.2% in 2019, 
-while Australia's rate has been increasing from 46.6% to 57.7%. Egypt has the lowest 
-employment rate ranging between 14.3 to 18.6 for the duration.
+China's employment rate for women has been decreasing from 71.6% from 1991 steadily to 2000 then followed by few steep declines that led to 58.2% in 2019, while Australia's rate has been increasing from 46.6% to 57.7%. Egypt has the lowest employment rate ranging between 14.3 to 18.6 for the duration.
 
 ```{python}
 highest_employ = (
@@ -401,18 +510,114 @@ highest_employ = (
 
 
 ```{python}
-lowest_employ = (
-    employ_child_fert
-    .loc[employ_child_fert.groupby("continent")["employment_rate"].idxmin()]
-    .sort_values(["employment_rate"], ascending=True)
-) 
-
+lowest_employ = employ_child_fert.loc[
+    employ_child_fert.groupby("continent")["employment_rate"].idxmin()
+].sort_values(["employment_rate"], ascending=True)
+ 
 ```
 
 ```{python}
-show(highest_mortality)
+# Create the map using plotly express with a blue color scale
+map_fig2 = px.choropleth(
+    employ_child_fert,
+    locations="country_code",
+    color="employment_rate",
+    hover_name="country",
+    animation_frame="year",
+    title="Map of Countries for Female Employment Rate",
+    #    color_continuous_scale="Purples",
+).update_layout(coloraxis_showscale=True)
 ```
+
+```{python}
+avg_fert_cont = (
+    employ_child_fert.groupby("continent")
+    .agg(mean_fertility=("woman_fertility", "mean"))
+    .reset_index()
+    .sort_values(by="mean_fertility", ascending=False)
+)
+
+fig_fert1 = px.bar(
+    avg_fert_cont,
+    y="continent",
+    x="mean_fertility",
+    title="Average Women's Fertility per Continent",
+    labels={'mean_fertility': 'Average Fertility'},
+    text_auto='0.2f'
+)
+```
+
+```{python}
+employ_child_fert.groupby('continent')['employment_rate'].mean()
+```
+
+# Final Tabset
+
+Below, we place our results into a tabbed interface.
+
+---
+title: "CO2 Emissions Report"
+author: "James Matosse"
+format: html
+---
+
+
+::: {.panel-tabset}
+
+## Mortality Table
+
+```{python}
+show(table_df)
+```
+
+## Chart
 
 ```{python}
 fig.show()
 ```
+
+## Map
+
+```{python}
+map_fig.show()
+```
+
+:::
+
+::: {.panel-tabset}
+
+## Chart
+
+```{python}
+fig_fert.show()
+```
+
+## Bar
+
+```{python}
+fig_fert1.show()
+```
+
+## Compare
+
+```{python}
+fig2.show()
+```
+
+:::
+
+::: {.panel-tabset}
+
+## Map
+
+```{python}
+map_fig2.show()
+```
+
+## Compare
+
+```{python}
+fig3.show()
+```
+
+:::
