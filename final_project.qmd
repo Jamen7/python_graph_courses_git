@@ -1,0 +1,384 @@
+---
+title: "Capstone Project | World's Child Mortality"  
+format: dashboard   
+---
+
+
+```{python}
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import numpy as np
+from itables import show
+import country_converter as coco
+
+# Load the data
+child_mortality = pd.read_csv(
+    "data/child_mortality_0_5_year_olds_dying_per_1000_born.csv"
+)
+fertility_wide = pd.read_csv("data/children_per_woman_total_fertility.csv")
+employ_wide = pd.read_csv("data/females_aged_15plus_employment_rate_percent.csv")
+
+# Subset the data to include `country`, `1999`, and `2019` columns only.
+table_df = child_mortality[["country", "1999", "2019"]]
+table_df = table_df.rename(columns={"country": "Country/area"})
+
+# Calculate absolute change as the difference between 2019 and 1999
+table_df["Absolute Change"] = table_df["2019"] - table_df["1999"]
+
+# Calculate relative change as the absolute change divided by the 2000 emissions, then multiplied by 100
+table_df["Relative Change"] = (
+    (table_df["2019"] - table_df["1999"]) / table_df["1999"]
+) * 100
+
+# Round to 0 decimal places, and add a % sign to the relative change
+table_df["Relative Change"] = table_df["Relative Change"].round(0).astype(str) + "%"
+
+# Data cleaning
+child_mortality_long = child_mortality.melt(
+    id_vars="country", var_name="year", value_name="mortality"
+)
+child_mortality_long["country"] = child_mortality_long["country"].replace(
+    {"UAE": "United Arab Emirates"}
+)
+
+# Convert 'country' to a 'country code' and add it as a new variable
+child_mortality_long["country_code"] = coco.convert(
+    child_mortality_long["country"], to="ISO3"
+)
+
+child_mortality_long["year"] = child_mortality_long["year"].astype(int)
+
+child_subset = child_mortality_long.query("year >= 1991 and year <= 2019")
+
+# Creates continent variable to the assigned country
+child_subset["continent"] = child_subset["country"].apply(
+    lambda x: coco.convert(names=x, to="continent")
+)
+
+fertility_long = fertility_wide.melt(
+    id_vars="country", var_name="year", value_name="woman_fertility"
+)
+
+fertility_long["country"] = fertility_long["country"].replace(
+    {"UAE": "United Arab Emirates"}
+)
+
+fertility_long["country_code"] = coco.convert(fertility_long["country"], to="ISO3")
+
+fertility_long["year"] = fertility_long["year"].astype(int)
+
+fertility_sub = fertility_long.query("year >= 1991 and year <= 2019")
+# Merged datasets
+child_fertility = pd.merge(
+    child_subset,
+    fertility_sub,
+    on=["country_code", "year"],
+    how="left",
+)
+
+child_fertility = child_fertility.drop(columns="country_y").rename(
+    columns={"country_x": "country"}
+)
+
+col_list = list(child_fertility.columns)
+
+col_list.insert(
+    1, col_list.pop(3)
+)  # Pop the 4th column (index 3) and insert at the 2nd
+col_list
+col_list.insert(
+    2, col_list.pop(4)
+)  # Pop the 5th column (index 4) and insert at the 3rd
+child_fertility = child_fertility[col_list]
+
+employ_long = employ_wide.melt(
+    id_vars="country", var_name="year", value_name="employment_rate"
+)
+
+employ_long["country"] = employ_long["country"].replace({"UAE": "United Arab Emirates"})
+# Replace "Channel Islands" with "United Kingdom"
+employ_long["country"] = employ_long["country"].replace(
+    "Channel Islands", "United Kingdom"
+)
+
+employ_long["country_code"] = coco.convert(employ_long["country"], to="ISO3")
+
+employ_long["year"] = employ_long["year"].astype(int)
+
+employ_child_fert = pd.merge(
+    child_fertility,
+    employ_long,
+    on=["country_code", "year"],
+    how="left",
+)
+employ_child_fert = employ_child_fert.drop(columns="country_y").rename(
+    columns={"country_x": "country"}
+)
+
+
+```
+
+
+```{python}
+highest_mortality = child_subset.loc[
+    child_subset.groupby("continent")["mortality"].idxmax()
+    ].sort_values(["mortality"], ascending=False)
+
+lowest_mortality = child_subset.loc[
+    child_subset.groupby("continent")["mortality"].idxmin()
+    ].sort_values(["mortality"], ascending=True)
+
+fig = px.bar(
+    lowest_mortality,
+    x="continent",
+    y="mortality",
+    color="country",
+    title="Lowest Child Mortality per Continent in 2019",
+    labels={'mortality': 'Child Mortality', 'continent': 'Continent'}
+)
+
+# Create the map using plotly express with a blue color scale
+map_fig = px.choropleth(
+    child_subset,
+    locations="country_code",
+    color="mortality",
+    hover_name="country",
+    animation_frame="year",
+    title="Map of Countries by Child Mortality",
+    color_continuous_scale="Reds",
+).update_layout(coloraxis_showscale=True)
+
+fig_fert = px.scatter(
+    child_fertility.query('country == ["China", "Egypt", "Australia", "Argentina"]'),
+    x="year",
+    y="woman_fertility",
+    color="country",
+    title="The Women's fertility from 1991 to 2019",
+    size="mortality",
+)
+
+highest_fertility = child_fertility.loc[
+    child_fertility.groupby("continent")["woman_fertility"].idxmax()
+].sort_values(["woman_fertility"], ascending=False)
+
+lowest_fertility = child_fertility.loc[
+    child_fertility.groupby("continent")["woman_fertility"].idxmin()
+].sort_values(["woman_fertility"], ascending=True)
+
+px.scatter(
+    employ_child_fert.query('country == ["China", "Egypt", "Australia", "Argentina"]'),
+    y="mortality",
+    x="woman_fertility",
+    color="country",
+    title="The Women's fertility vs child mortality from 1991 to 2019",
+    size="employment_rate",
+    facet_col="country",
+)
+
+# Filter the data
+filtered_data = employ_child_fert.query('country == ["China", "Egypt", "Australia", "Argentina"]')
+
+# Create the figure
+fig2 = go.Figure()
+
+# Define a color mapping for consistency
+color_map = {
+    "China": "red",
+    "Egypt": "blue",
+    "Australia": "green",
+    "Argentina": "orange"
+}
+
+# Add scatter plot for 'mortality' vs. 'year' (y-axis 1)
+for country in filtered_data['country'].unique():
+    country_data = filtered_data[filtered_data['country'] == country]
+    fig2.add_trace(
+        go.Scatter(
+            x=country_data['year'],
+            y=country_data['mortality'],
+            mode='markers',
+            name=f"{country} (Mortality)",
+            legendgroup=country,
+            marker=dict(color=color_map[country]),  # Assign color
+        )
+    )
+
+# Add a secondary y-axis for 'woman_fertility' (y-axis 2)
+for country in filtered_data['country'].unique():
+    country_data = filtered_data[filtered_data['country'] == country]
+    fig2.add_trace(
+        go.Scatter(
+            x=country_data['year'],
+            y=country_data['woman_fertility'],
+            mode='lines',
+            name=f"{country} (Women's Fertility)",
+            yaxis='y2',
+            showlegend=False,  # Avoid duplicate legends
+            line=dict(color=color_map[country])  # Assign matching color
+        )
+    )
+
+# Update layout to include a second y-axis
+fig2.update_layout(
+    title="The Women's Fertility and Child Mortality from 1991 to 2019",
+    xaxis=dict(title="Year"),
+    yaxis=dict(title="Mortality", side='left'),
+    yaxis2=dict(
+        title="Women's Fertility",
+        overlaying='y',
+        side='right',
+        showgrid=False
+    ),
+    legend=dict(
+        orientation='h',  # Horizontal orientation
+        yanchor='top',    # Anchor at the top of the legend box
+        y=-0.2,           # Position it below the plot (adjust as needed)
+        xanchor='center', # Center align the legend
+        x=0.5             # Place at the center of the plot horizontally
+    ),
+    legend_title="Country"
+)
+
+px.line(employ_child_fert
+    .query(
+        'country == ["China", "Egypt", "Australia", "Argentina"]'), 
+    x= 'year', 
+    y='employment_rate', 
+    color='country', 
+    title= 'The Female Employment Rate from 1991 to 2019'
+    )
+
+highest_employ = (
+    employ_child_fert
+    .loc[employ_child_fert.groupby("continent")["employment_rate"].idxmax()]
+    .dropna()  # Remove rows with NaN values
+    .sort_values(["employment_rate"], ascending=False)
+) 
+
+lowest_employ = employ_child_fert.loc[
+    employ_child_fert.groupby("continent")["employment_rate"].idxmin()
+].sort_values(["employment_rate"], ascending=True)
+ 
+# Create the map using plotly express with a blue color scale
+map_fig2 = px.choropleth(
+    employ_child_fert,
+    locations="country_code",
+    color="employment_rate",
+    hover_name="country",
+    animation_frame="year",
+    title="Map of Countries for Female Employment Rate",
+    #    color_continuous_scale="Purples",
+).update_layout(coloraxis_showscale=True)
+
+avg_fert_cont = (
+    employ_child_fert.groupby("continent")
+    .agg(mean_fertility=("woman_fertility", "mean"))
+    .reset_index()
+    .sort_values(by="mean_fertility", ascending=False)
+)
+
+fig_fert1 = px.bar(
+    avg_fert_cont,
+    y="continent",
+    x="mean_fertility",
+    title="Average Women's Fertility per Continent",
+    labels={'mean_fertility': 'Average Fertility'},
+    text_auto='0.2f'
+)
+
+```
+
+
+# HOME
+
+## Row 1 {height=30%}
+
+::: {.valuebox icon="heart" color="#1E90FF" title="Highest Life Expectancy"}
+
+`{python} 5*16`
+
+China
+
+:::
+
+::: {.valuebox icon="thermometer" color="#87CEFA" title="Lowest Life Expectancy"} 
+
+`{python} 8*6`
+
+Egypt
+
+:::
+
+::: {.valuebox icon="graph-up" color="#4682B4" title="Average Life Expectancy"}
+
+`{python} 85 `
+
+:::
+
+## Row 2 {height=60%}
+
+### {width=70%}
+
+```{python}
+map_fig
+```
+
+### {width=40%}
+
+```{python}
+fig_fert
+```
+
+# REGIONAL
+
+## Row 1 {height=30%}
+
+```{python}
+show(table_df, caption="Gapminder Dataset (2007)")
+```
+
+## Row 2 {height=70%}
+
+### Column {width="80%"}
+
+```{python}
+continent_fig = px.box(
+    employ_child_fert,
+    x="continent",
+    y="employment_rate",
+    color="continent",
+    title="Distribution of Female Employment Rate by Continent",
+    points="all",  # This shows all data points
+    hover_data=["country"],  # This adds country names to hover info
+    color_discrete_sequence=px.colors.sequential.Turbo,  # Built-in Blues palette
+).update_layout(
+    showlegend=False, xaxis_title="Continent", yaxis_title="Life Expectancy (years)"
+)
+
+continent_fig
+```
+
+### Column {width="20%"}
+
+Africa shows markedly lower life expectancy figures compared to other continents, reflecting significant developmental challenges.
+
+Europe and Oceania demonstrate the most consistently high life expectancies, while Asia and the Americas show greater variability, indicating diverse development stages within these regions.
+
+# DATA DOWNLOAD
+
+```{python}
+# Display full dataset with itables
+show(employ_child_fert, caption="Gapminder Dataset (2007)", buttons=["csvHtml5"])
+```
+
+
+# ABOUT
+
+This data comes from the python `plotly.express` library’s `gapminder` dataset, which is originally sourced from the Gapminder Foundation.
+
+The Gapminder Foundation is a non-profit venture that promotes sustainable global development and achievement of the United Nations Millennium Development Goals by increasing use and understanding of statistics and other information about social, economic, and environmental development.
+
+**Watch Hans Rosling’s TED Talk:**
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/hVimVzgtD6w?si=dKHepC5EXhjaXOe2" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
