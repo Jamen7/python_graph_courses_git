@@ -137,6 +137,8 @@ map_fig = px.choropleth(
 
 # Women's fertility Analaysis
 
+**Babies per woman, total fertility** this is the number of children that would be born to a woman if she were to live to the end of her childbearing years and bear children in accordance with age-specific fertility rates of the specified year. It expresses the statisctical indicator total fertility rate.
+
 ## Fertility dataset
 
 ```{python}
@@ -272,6 +274,8 @@ lowest_fertility = child_fertility.loc[
 
 ## Female Employment Rate
 
+Percentage of female population, age group 15+, that has been employed during the given year.
+
 ```{python}
 employ_wide = pd.read_csv("data/females_aged_15plus_employment_rate_percent.csv")
 employ_wide
@@ -397,45 +401,47 @@ fig2.show()
 
 
 ```{python}
-#import plotly.graph_objects as go
+# import plotly.graph_objects as go
 
 # Filter the data
-filtered_data = employ_child_fert.query('country == ["China", "Egypt", "Australia", "Argentina"]')
+filtered_data = employ_child_fert.query(
+    'country == ["China", "Egypt", "Australia", "Argentina"]'
+)
 
 # Get unique countries
-countries = filtered_data['country'].unique()
+countries = filtered_data["country"].unique()
 
 # Create the figure
 fig3 = go.Figure()
 
 # Iterate through countries to add subplots
 for i, country in enumerate(countries):
-    country_data = filtered_data[filtered_data['country'] == country]
+    country_data = filtered_data[filtered_data["country"] == country]
 
     # Add scatter plot for 'woman_fertility' vs. 'year'
     fig3.add_trace(
         go.Scatter(
-            x=country_data['year'],
-            y=country_data['woman_fertility'],
-            mode='markers',
+            x=country_data["year"],
+            y=country_data["woman_fertility"],
+            mode="markers",
             name=f"{country} (Women's Fertility)",
             legendgroup=country,
-            showlegend=False, #(i <= 3),  # Show legend only for the first facet
-            xaxis=f'x{i+1}',
-            yaxis=f'y{i+1}'
+            showlegend=False,  # (i <= 3),  # Show legend only for the first facet
+            xaxis=f"x{i+1}",
+            yaxis=f"y{i+1}",
         )
     )
 
     # Add a secondary y-axis for 'employment_rate' in all facets
     fig3.add_trace(
         go.Scatter(
-            x=country_data['year'],
-            y=country_data['employment_rate'],
-            mode='lines',
+            x=country_data["year"],
+            y=country_data["employment_rate"],
+            mode="lines",
             name=f"{country} (Employment Rate)",
-            yaxis=f'y{i+1}2',  # Use a secondary y-axis
+            yaxis=f"y{i+1}2",  # Use a secondary y-axis
             showlegend=False,  # No duplicate legend
-            xaxis=f'x{i+1}'
+            xaxis=f"x{i+1}",
         )
     )
 
@@ -443,43 +449,48 @@ for i, country in enumerate(countries):
 num_countries = len(countries)
 fig3.update_layout(
     title="Women's Fertility and Employment Rate (Faceted by Country)",
-    grid=dict(rows=1, columns=num_countries, pattern='independent'),  # Independent axes for each country
+    grid=dict(
+        rows=1, columns=num_countries, pattern="independent"
+    ),  # Independent axes for each country
     margin=dict(t=50, b=50, l=50, r=50),
     legend=dict(
-        orientation='h',  # Horizontal orientation
-        yanchor='top',    # Anchor at the top of the legend box
-        y=-0.2,           # Position it below the plot (adjust as needed)
-        xanchor='center', # Center align the legend
-        x=0.5             # Place at the center of the plot horizontally
+        orientation="h",  # Horizontal orientation
+        yanchor="top",  # Anchor at the top of the legend box
+        y=-0.2,  # Position it below the plot (adjust as needed)
+        xanchor="center",  # Center align the legend
+        x=0.5,  # Place at the center of the plot horizontally
     ),
 )
 
 # Configure individual subplots
 for i, country in enumerate(countries):
     # Add primary y-axis to all facets
-    fig3.update_layout(**{
-        f'xaxis{i+1}': dict(title="Year"),
-        f'yaxis{i+1}': dict(title="Women's Fertility", side='left'),
-    })
+    fig3.update_layout(
+        **{
+            f"xaxis{i+1}": dict(title="Year"),
+            f"yaxis{i+1}": dict(title="Women's Fertility", side="left"),
+        }
+    )
     # Configure secondary y-axis for all facets
     if i == len(countries) - 1:  # Last facet column
-        fig3.update_layout(**{
-            f'yaxis{i+1}2': dict(
-                title="Employment Rate",  # Add title only in the last column
-                overlaying=f'y{i+1}',
-                side='right',
-                showgrid=False
-            )
-        })
+        fig3.update_layout(
+            **{
+                f"yaxis{i+1}2": dict(
+                    title="Employment Rate",  # Add title only in the last column
+                    overlaying=f"y{i+1}",
+                    side="right",
+                    showgrid=False,
+                )
+            }
+        )
     else:
-        fig3.update_layout(**{
-            f'yaxis{i+1}2': dict(
-                overlaying=f'y{i+1}',
-                side='right',
-                showgrid=False,
-                title=None
-            )
-        })
+        fig3.update_layout(
+            **{
+                f"yaxis{i+1}2": dict(
+                    overlaying=f"y{i+1}", side="right", showgrid=False, title=None
+                )
+            }
+        )
 
 # Show the figure
 fig3.show()
@@ -549,6 +560,16 @@ fig_fert1 = px.bar(
 
 ```{python}
 employ_child_fert.groupby('continent')['employment_rate'].mean()
+
+# Compute highest employment rate
+highest_row = employ_child_fert.sort_values("employment_rate", ascending=False).head(1).squeeze()
+highest_employ_rat_country = highest_row["country"]
+highest_employ_rat_value = round(highest_row["employment_rate"], 1)
+
+# Compute lowest child mortality
+lowest_row = employ_child_fert.sort_values("mortality", ascending=True).head(1).squeeze()
+lowest_mortality_country = loweest_row["country"]
+lowest_mortality_value = round(lowest_row["mortality"], 1)
 ```
 
 # Final Tabset

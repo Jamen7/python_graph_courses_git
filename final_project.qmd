@@ -86,7 +86,7 @@ col_list = list(child_fertility.columns)
 col_list.insert(
     1, col_list.pop(3)
 )  # Pop the 4th column (index 3) and insert at the 2nd
-col_list
+# col_list
 col_list.insert(
     2, col_list.pop(4)
 )  # Pop the 5th column (index 4) and insert at the 3rd
@@ -123,11 +123,11 @@ employ_child_fert = employ_child_fert.drop(columns="country_y").rename(
 ```{python}
 highest_mortality = child_subset.loc[
     child_subset.groupby("continent")["mortality"].idxmax()
-    ].sort_values(["mortality"], ascending=False)
+].sort_values(["mortality"], ascending=False)
 
 lowest_mortality = child_subset.loc[
     child_subset.groupby("continent")["mortality"].idxmin()
-    ].sort_values(["mortality"], ascending=True)
+].sort_values(["mortality"], ascending=True)
 
 fig = px.bar(
     lowest_mortality,
@@ -135,8 +135,12 @@ fig = px.bar(
     y="mortality",
     color="country",
     title="Lowest Child Mortality per Continent in 2019",
-    labels={'mortality': 'Child Mortality', 'continent': 'Continent'}
-)
+    labels={
+        "mortality": "Child Mortality",
+        "continent": "Continent",
+        "country": "Country",
+    },
+).update_layout(showlegend=False)
 
 # Create the map using plotly express with a blue color scale
 map_fig = px.choropleth(
@@ -146,16 +150,31 @@ map_fig = px.choropleth(
     hover_name="country",
     animation_frame="year",
     title="Map of Countries by Child Mortality",
+    labels={
+        "country_code": "Country Code",
+        "mortality": "Child Mortality",
+        "year": "Year",
+    },
     color_continuous_scale="Reds",
 ).update_layout(coloraxis_showscale=True)
 
 fig_fert = px.scatter(
-    child_fertility.query('country == ["China", "Egypt", "Australia", "Argentina"]'),
+    child_fertility.query(
+        'country == ["China", "Egypt", "Australia", "Argentina", "Germany"]'
+    ),
     x="year",
     y="woman_fertility",
     color="country",
-    title="The Women's fertility from 1991 to 2019",
+    title="The Woman's fertility from 1991 to 2019",
     size="mortality",
+    labels={
+        "country": "Country",
+        "woman_fertility": "Woman's Fertility",
+        "year": "Year",
+        "mortality": "Child Mortality",
+    },
+).update_layout(
+    showlegend=False, xaxis_title="Year", yaxis_title="Total Fertility Rate"
 )
 
 highest_fertility = child_fertility.loc[
@@ -166,18 +185,10 @@ lowest_fertility = child_fertility.loc[
     child_fertility.groupby("continent")["woman_fertility"].idxmin()
 ].sort_values(["woman_fertility"], ascending=True)
 
-px.scatter(
-    employ_child_fert.query('country == ["China", "Egypt", "Australia", "Argentina"]'),
-    y="mortality",
-    x="woman_fertility",
-    color="country",
-    title="The Women's fertility vs child mortality from 1991 to 2019",
-    size="employment_rate",
-    facet_col="country",
-)
-
 # Filter the data
-filtered_data = employ_child_fert.query('country == ["China", "Egypt", "Australia", "Argentina"]')
+filtered_data = employ_child_fert.query(
+    'country == ["China", "Egypt", "Australia", "Argentina", "Germany"]'
+)
 
 # Create the figure
 fig2 = go.Figure()
@@ -187,79 +198,78 @@ color_map = {
     "China": "red",
     "Egypt": "blue",
     "Australia": "green",
-    "Argentina": "orange"
+    "Argentina": "orange",
+    "Germany": "purple",
 }
 
-# Add scatter plot for 'mortality' vs. 'year' (y-axis 1)
-for country in filtered_data['country'].unique():
-    country_data = filtered_data[filtered_data['country'] == country]
+# Add scatter plot for 'employment_rate' vs. 'year' (y-axis 1)
+for country in filtered_data["country"].unique():
+    country_data = filtered_data[filtered_data["country"] == country]
     fig2.add_trace(
         go.Scatter(
-            x=country_data['year'],
-            y=country_data['mortality'],
-            mode='markers',
-            name=f"{country} (Mortality)",
+            x=country_data["year"],
+            y=country_data["employment_rate"],
+            mode="markers",
+            name=f"{country} (Employment)",
             legendgroup=country,
+            showlegend=False,
             marker=dict(color=color_map[country]),  # Assign color
         )
     )
 
 # Add a secondary y-axis for 'woman_fertility' (y-axis 2)
-for country in filtered_data['country'].unique():
-    country_data = filtered_data[filtered_data['country'] == country]
+for country in filtered_data["country"].unique():
+    country_data = filtered_data[filtered_data["country"] == country]
     fig2.add_trace(
         go.Scatter(
-            x=country_data['year'],
-            y=country_data['woman_fertility'],
-            mode='lines',
-            name=f"{country} (Women's Fertility)",
-            yaxis='y2',
+            x=country_data["year"],
+            y=country_data["woman_fertility"],
+            mode="lines",
+            name=f"{country} (Woman's Fertility)",
+            yaxis="y2",
             showlegend=False,  # Avoid duplicate legends
-            line=dict(color=color_map[country])  # Assign matching color
+            line=dict(color=color_map[country]),  # Assign matching color
         )
     )
 
 # Update layout to include a second y-axis
 fig2.update_layout(
-    title="The Women's Fertility and Child Mortality from 1991 to 2019",
+    title="The Woman's Fertility and Employment Rate from 1991 to 2019",
     xaxis=dict(title="Year"),
-    yaxis=dict(title="Mortality", side='left'),
+    yaxis=dict(title="Female Employment Rate", side="left"),
     yaxis2=dict(
-        title="Women's Fertility",
-        overlaying='y',
-        side='right',
-        showgrid=False
+        title="Total Fertility Rate", overlaying="y", side="right", showgrid=False
     ),
     legend=dict(
-        orientation='h',  # Horizontal orientation
-        yanchor='top',    # Anchor at the top of the legend box
-        y=-0.2,           # Position it below the plot (adjust as needed)
-        xanchor='center', # Center align the legend
-        x=0.5             # Place at the center of the plot horizontally
+        orientation="h",  # Horizontal orientation
+        yanchor="top",  # Anchor at the top of the legend box
+        y=-0.2,  # Position it below the plot (adjust as needed)
+        xanchor="center",  # Center align the legend
+        x=0.5,  # Place at the center of the plot horizontally
     ),
-    legend_title="Country"
+    legend_title="Country",
 )
 
-px.line(employ_child_fert
-    .query(
-        'country == ["China", "Egypt", "Australia", "Argentina"]'), 
-    x= 'year', 
-    y='employment_rate', 
-    color='country', 
-    title= 'The Female Employment Rate from 1991 to 2019'
-    )
-
 highest_employ = (
-    employ_child_fert
-    .loc[employ_child_fert.groupby("continent")["employment_rate"].idxmax()]
+    employ_child_fert.loc[
+        employ_child_fert.groupby("continent")["employment_rate"].idxmax()
+    ]
     .dropna()  # Remove rows with NaN values
     .sort_values(["employment_rate"], ascending=False)
-) 
+)
+highest_employ = highest_employ.rename(
+    columns={
+        "country": "Country/area",
+        "continent": "Continent",
+        "year": "Year",
+        "employment_rate": "Employment Rate",
+    }
+)
 
 lowest_employ = employ_child_fert.loc[
     employ_child_fert.groupby("continent")["employment_rate"].idxmin()
 ].sort_values(["employment_rate"], ascending=True)
- 
+
 # Create the map using plotly express with a blue color scale
 map_fig2 = px.choropleth(
     employ_child_fert,
@@ -268,7 +278,12 @@ map_fig2 = px.choropleth(
     hover_name="country",
     animation_frame="year",
     title="Map of Countries for Female Employment Rate",
-    #    color_continuous_scale="Purples",
+    labels={
+        "country_code": "Country Code",
+        "employment_rate": "Employment Rate",
+        "year": "Year",
+    },
+    color_continuous_scale="Greens",
 ).update_layout(coloraxis_showscale=True)
 
 avg_fert_cont = (
@@ -278,104 +293,231 @@ avg_fert_cont = (
     .sort_values(by="mean_fertility", ascending=False)
 )
 
-fig_fert1 = px.bar(
+fig_fert1 = px.pie(
     avg_fert_cont,
-    y="continent",
-    x="mean_fertility",
-    title="Average Women's Fertility per Continent",
-    labels={'mean_fertility': 'Average Fertility'},
-    text_auto='0.2f'
+    names="continent",
+    values="mean_fertility",
+    title="Average Woman's Fertility per Continent",
+    labels={"mean_fertility": "Average Fertility", "continent": "Continent"},
+    hover_data=["mean_fertility"],
+).update_traces(
+    textinfo="label+percent", showlegend=False  # Show label and percent
 )
 
+# Compute highest employment rate
+highestE_row = (
+    employ_child_fert.sort_values("employment_rate", ascending=False).head(1).squeeze()
+)
+highest_employ_rat_country = highestE_row["country"]
+highest_employ_rat_value = round(highestE_row["employment_rate"], 2)
+highest_employ_rat_year = highestE_row["year"]
+
+# Compute lowest child mortality
+lowest_row = (
+    employ_child_fert.sort_values("mortality", ascending=True).head(1).squeeze()
+)
+lowest_mortality_country = lowest_row["country"]
+lowest_mortality_value = round(lowest_row["mortality"], 1)
+lowest_mortality_year = lowest_row["year"]
+
+# Compute highest fertility rate
+highestF_row = (
+    employ_child_fert.sort_values("woman_fertility", ascending=False).head(1).squeeze()
+)
+highest_fertility_country = highestF_row["country"]
+highest_fertility_value = round(highestF_row["employment_rate"], 2)
+highest_fertility_year = highestF_row["year"]
+
+employ_child_fert = employ_child_fert.rename(
+    columns={
+        "country": "Country/area",
+        "country_code": "Country Code",
+        "continent": "Continent",
+        "year": "Year",
+        "mortality": "Child Mortality",
+        "woman_fertility": "Fertility Rate",
+        "employment_rate": "Employment Rate",
+    }
+)
+
+lowest20 = (
+    employ_child_fert[employ_child_fert["Year"] == 2019]
+    .sort_values("Fertility Rate", ascending=True)
+    .head(20)
+)
 ```
 
 
 # HOME
 
-## Row 1 {height=30%}
+## Row 1 {height=35%}
 
-::: {.valuebox icon="heart" color="#1E90FF" title="Highest Life Expectancy"}
+::: {.valuebox icon="heart" color="#1E90FF" title="Lowest Child Mortality"}
 
-`{python} 5*16`
+`{python} str(lowest_mortality_value)`
 
-China
-
-:::
-
-::: {.valuebox icon="thermometer" color="#87CEFA" title="Lowest Life Expectancy"} 
-
-`{python} 8*6`
-
-Egypt
+`{python} lowest_mortality_country` in `{python} str(lowest_mortality_year)`
 
 :::
 
-::: {.valuebox icon="graph-up" color="#4682B4" title="Average Life Expectancy"}
+::: {.valuebox icon="flower3" color="#87CEFA" title="Highest Total Fertility Rate"} 
 
-`{python} 85 `
+`{python} str(highest_fertility_value)`
+
+`{python} highest_fertility_country` in `{python} str(highest_fertility_year)`
 
 :::
+
+::: {.valuebox icon="mortarboard-fill" color="#4682B4" title="Highest Employment Rate"}
+
+`{python} str(highest_employ_rat_value)`
+
+`{python} highest_employ_rat_country` in `{python} str(highest_employ_rat_year)`
+
+:::
+
+## Row 2 {height=65%}
+
+### {width=50%}
+
+```{python}
+fig2.show()
+```
+
+### {width=50%}
+
+```{python}
+fig_fert.show()
+```
+
+# Child Mortality
+
+## Row 1 {height=50%}
+
+```{python}
+show(table_df, caption="Child Mortality")
+# This table can be filtered alphabetically by country or sorted in ascending/descending order by any other column.
+```
+
+## Row 2 {height=50%}
+
+### Column {width="70%"}
+
+```{python}
+fig.show()
+```
+
+### Column {width="30%"}
+
+The chart highlights clear disparities between continents in child mortality rates, with developed regions (Europe, Asia, Oceania) showing significantly lower rates compared to developing regions (America and Africa).
+
+This data underscores the importance of healthcare infrastructure, economic development, and public health initiatives in reducing child mortality rates. Finland having the lowest child mortality rate among all continents, with a value close to 1. This suggests excellent healthcare systems and child welfare practices in the country. In contrast, Libya has the highest child mortality rate among the listed continents, with a value significantly higher than the rest. This reflects disparities in healthcare access, infrastructure, and socioeconomic conditions in the African region.
+
+# Woman's Fertility
+
+## Row 1 {height=40%}
+
+
+```{python}
+fig_fert2 = px.bar(lowest20, x='Country Code', y='Fertility Rate', color= 'Continent', hover_name='Country/area', title='Lowest Total Fertility Rate in 2019').update_layout(showlegend=False)
+
+fig_fert2.show()
+```
 
 ## Row 2 {height=60%}
 
-### {width=70%}
+### Column {width="70%"}
 
 ```{python}
-map_fig
+fig_fert1.show()
 ```
 
-### {width=40%}
+### Column {width="30%"}
+
+There is a clear divide between continents with higher fertility rates (Africa and Oceania) and those with lower rates (Europe, America, and parts of Asia). The data reflects varying levels of development, healthcare access, education, and cultural norms influencing fertility rates worldwide.
+
+# Employment Rate
+
+## Row 1 {height=60%}
+
+### Column {width="60%"}
 
 ```{python}
-fig_fert
+map_fig2.show()
 ```
 
-# REGIONAL
-
-## Row 1 {height=30%}
+### Column 
 
 ```{python}
-show(table_df, caption="Gapminder Dataset (2007)")
+fig3 = px.bar(
+    highest_employ,
+    x="Employment Rate",
+    y="Continent",
+    color="Country/area",
+    hover_name="Year",
+    title="Highest Female Employment Rate in Each Continent",
+#    labels={'mortality': 'Child Mortality', 'continent': 'Continent', 'country': 'Country'}
+).update_layout(
+    showlegend=False
+)
+#show(highest_employ[['Country/area', 'Continent','Year', 'Employment Rate']], caption="Highest Female Employment Rate in each Continent")
+fig3.show()
 ```
 
-## Row 2 {height=70%}
+## Row 2 {height=40%}
 
-### Column {width="80%"}
+### Column {width="60%"}
 
 ```{python}
 continent_fig = px.box(
     employ_child_fert,
-    x="continent",
-    y="employment_rate",
-    color="continent",
-    title="Distribution of Female Employment Rate by Continent",
+    x="Continent",
+    y="Employment Rate",
+    color="Continent",
+    animation_frame="Year",  # Add animation for the year
+    title="Distribution of Female Employment Rate by Continent (1991-2019)",
     points="all",  # This shows all data points
-    hover_data=["country"],  # This adds country names to hover info
+    hover_data=["Country/area"],  # This adds country names to hover info
     color_discrete_sequence=px.colors.sequential.Turbo,  # Built-in Blues palette
 ).update_layout(
-    showlegend=False, xaxis_title="Continent", yaxis_title="Life Expectancy (years)"
+    showlegend=False, xaxis_title="Continent", yaxis_title="Employment Rate",
+    sliders=[
+        {
+            "active": employ_child_fert['Year'].unique().tolist().index(2018),  # Set slider to 2018 index
+        }
+    ]
 )
 
-continent_fig
+continent_fig.show()
 ```
 
-### Column {width="20%"}
+### Column {width="40%"}
 
-Africa shows markedly lower life expectancy figures compared to other continents, reflecting significant developmental challenges.
+**For 2018** Africa and Oceania have relatively high upper bounds for female employment rates compared to other continents. In contrast, Asia has the lowest minimum values, indicating that some countries have significantly low participation rates.
 
-Europe and Oceania demonstrate the most consistently high life expectancies, while Asia and the Americas show greater variability, indicating diverse development stages within these regions.
+Africa exhibits the widest range of female employment rates, reflecting significant variability between countries on this continent. However, it also has the highest median, suggesting that most countries in Africa have a relatively high rate of female employment compared to other continents.
+
+Asia also shows a broad range, with some countries having very low employment rates and others quite high. On the other hand, Europe, America, and Oceania demonstrate relatively smaller ranges, indicating more consistency within these continents. Furthermore, Europe and America have lower medians compared to Africa and Oceania, reflecting a slightly lower overall female employment rate.
+
 
 # DATA DOWNLOAD
 
 ```{python}
 # Display full dataset with itables
-show(employ_child_fert, caption="Gapminder Dataset (2007)", buttons=["csvHtml5"])
+show(employ_child_fert, caption="Child mortality, total fertility and employment rate Dataset (1991 to 2019)", buttons=["csvHtml5"])
 ```
 
 
 # ABOUT
 
-This data comes from the python `plotly.express` library’s `gapminder` dataset, which is originally sourced from the Gapminder Foundation.
+The data used for this PBB's capstone project was obtained from [Gapminder's data repository](https://gapminder.org/data). Three indicators were selected for analysis namely; "child mortality", "total fertilty rate", and "female employment rate".
+
+Total fertility rate is the number of children that would be born to a woman if she were to live to the end of her childbearing years and bear children in accordance with age-specific fertility rates of the specified year.
+Child mortality is for 0 to 5 year olds dying per 1000 born.
+Female employment rate the percentage of female population, age group 15+, that has been employed during the given year.
+
+
+Gapminder is an independent Swedish foundation with no political, religious or economic affiliations. Gapminder fights devastating misconceptions and promotes a fact-based worldview everyone can understand.
 
 The Gapminder Foundation is a non-profit venture that promotes sustainable global development and achievement of the United Nations Millennium Development Goals by increasing use and understanding of statistics and other information about social, economic, and environmental development.
 
