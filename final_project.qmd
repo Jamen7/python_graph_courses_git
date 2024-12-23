@@ -1,6 +1,9 @@
 ---
-title: "Capstone Project | World's Child Mortality"  
-format: dashboard   
+title: "Gapminder | Child Mortality & Fertility Rate"  
+author: "James Matosse"
+format: 
+    dashboard:
+        theme: yeti   
 ---
 
 
@@ -11,6 +14,7 @@ import plotly.graph_objects as go
 import numpy as np
 from itables import show
 import country_converter as coco
+from IPython.display import Markdown
 
 # Load the data
 child_mortality = pd.read_csv(
@@ -121,6 +125,23 @@ employ_child_fert = employ_child_fert.drop(columns="country_y").rename(
 
 
 ```{python}
+# Define a color mapping for consistency
+continent_color = {
+    "Asia": "red",
+    "Africa": "blue",
+    "Oceania": "green",
+    "America": "orange",
+    "Europe": "purple",
+}
+
+color_map = {
+    "China": "red",
+    "Egypt": "blue",
+    "Australia": "green",
+    "Argentina": "orange",
+    "Germany": "purple",
+}
+
 highest_mortality = child_subset.loc[
     child_subset.groupby("continent")["mortality"].idxmax()
 ].sort_values(["mortality"], ascending=False)
@@ -131,8 +152,8 @@ lowest_mortality = child_subset.loc[
 
 fig = px.bar(
     lowest_mortality,
-    x="continent",
-    y="mortality",
+    y="continent",
+    x="mortality",
     color="country",
     title="Lowest Child Mortality per Continent in 2019",
     labels={
@@ -140,9 +161,10 @@ fig = px.bar(
         "continent": "Continent",
         "country": "Country",
     },
+    color_discrete_map=color_map,
 ).update_layout(showlegend=False)
 
-# Create the map using plotly express with a blue color scale
+# Create the map using plotly express with a red color scale
 map_fig = px.choropleth(
     child_subset,
     locations="country_code",
@@ -167,6 +189,7 @@ fig_fert = px.scatter(
     color="country",
     title="The Woman's fertility from 1991 to 2019",
     size="mortality",
+    color_discrete_map=color_map,
     labels={
         "country": "Country",
         "woman_fertility": "Woman's Fertility",
@@ -192,15 +215,6 @@ filtered_data = employ_child_fert.query(
 
 # Create the figure
 fig2 = go.Figure()
-
-# Define a color mapping for consistency
-color_map = {
-    "China": "red",
-    "Egypt": "blue",
-    "Australia": "green",
-    "Argentina": "orange",
-    "Germany": "purple",
-}
 
 # Add scatter plot for 'employment_rate' vs. 'year' (y-axis 1)
 for country in filtered_data["country"].unique():
@@ -250,13 +264,13 @@ fig2.update_layout(
     legend_title="Country",
 )
 
+filter_year = employ_child_fert.query("year == 2019")
 highest_employ = (
-    employ_child_fert.loc[
-        employ_child_fert.groupby("continent")["employment_rate"].idxmax()
-    ]
+    filter_year.loc[filter_year.groupby("continent")["employment_rate"].idxmax()]
     .dropna()  # Remove rows with NaN values
     .sort_values(["employment_rate"], ascending=False)
 )
+
 highest_employ = highest_employ.rename(
     columns={
         "country": "Country/area",
@@ -270,7 +284,7 @@ lowest_employ = employ_child_fert.loc[
     employ_child_fert.groupby("continent")["employment_rate"].idxmin()
 ].sort_values(["employment_rate"], ascending=True)
 
-# Create the map using plotly express with a blue color scale
+# Create the map using plotly express with a green color scale
 map_fig2 = px.choropleth(
     employ_child_fert,
     locations="country_code",
@@ -297,9 +311,11 @@ fig_fert1 = px.pie(
     avg_fert_cont,
     names="continent",
     values="mean_fertility",
+    color="continent",
     title="Average Woman's Fertility per Continent",
     labels={"mean_fertility": "Average Fertility", "continent": "Continent"},
     hover_data=["mean_fertility"],
+    color_discrete_map=continent_color,
 ).update_traces(
     textinfo="label+percent", showlegend=False  # Show label and percent
 )
@@ -350,7 +366,7 @@ lowest20 = (
 
 # HOME
 
-## Row 1 {height=35%}
+## Row 1 {height=30%}
 
 ::: {.valuebox icon="heart" color="#1E90FF" title="Lowest Child Mortality"}
 
@@ -368,7 +384,7 @@ lowest20 = (
 
 :::
 
-::: {.valuebox icon="mortarboard-fill" color="#4682B4" title="Highest Employment Rate"}
+::: {.valuebox icon="mortarboard-fill" color="#4682B4" title="Highest Female Employment Rate"}
 
 `{python} str(highest_employ_rat_value)`
 
@@ -376,100 +392,131 @@ lowest20 = (
 
 :::
 
-## Row 2 {height=65%}
+## Row 2 {height=60%}
 
 ### {width=50%}
 
 ```{python}
-fig2.show()
+fig2
 ```
 
 ### {width=50%}
 
 ```{python}
-fig_fert.show()
+fig_fert
 ```
 
-# Child Mortality
+# Child Mortality 
 
-## Row 1 {height=50%}
+## Row {height=80%}
+
+### Column {width="60%"}
 
 ```{python}
-show(table_df, caption="Child Mortality")
+#| title: Child Mortality
+#show(table_df, caption="Child Mortality")
+Markdown(table_df.to_markdown())
 # This table can be filtered alphabetically by country or sorted in ascending/descending order by any other column.
 ```
 
-## Row 2 {height=50%}
 
-### Column {width="70%"}
+### Column {.tabset width="40%"}
+
+#### Map
 
 ```{python}
-fig.show()
+map_fig
 ```
 
-### Column {width="30%"}
+#### Chart
+
+```{python}
+fig
+```
+
+## Row {height="20%"}
 
 The chart highlights clear disparities between continents in child mortality rates, with developed regions (Europe, Asia, Oceania) showing significantly lower rates compared to developing regions (America and Africa).
 
 This data underscores the importance of healthcare infrastructure, economic development, and public health initiatives in reducing child mortality rates. Finland having the lowest child mortality rate among all continents, with a value close to 1. This suggests excellent healthcare systems and child welfare practices in the country. In contrast, Libya has the highest child mortality rate among the listed continents, with a value significantly higher than the rest. This reflects disparities in healthcare access, infrastructure, and socioeconomic conditions in the African region.
 
-# Woman's Fertility
+# Woman's Fertility {orientation="columns"}
 
-## Row 1 {height=40%}
+## Column 1 {width="60%"}
 
-
-```{python}
-fig_fert2 = px.bar(lowest20, x='Country Code', y='Fertility Rate', color= 'Continent', hover_name='Country/area', title='Lowest Total Fertility Rate in 2019').update_layout(showlegend=False)
-
-fig_fert2.show()
-```
-
-## Row 2 {height=60%}
-
-### Column {width="70%"}
+### Row {height=80%}
 
 ```{python}
-fig_fert1.show()
+fig_fert1
 ```
 
-### Column {width="30%"}
+### Row
 
 There is a clear divide between continents with higher fertility rates (Africa and Oceania) and those with lower rates (Europe, America, and parts of Asia). The data reflects varying levels of development, healthcare access, education, and cultural norms influencing fertility rates worldwide.
 
-# Employment Rate
 
-## Row 1 {height=60%}
+## Column 2 
+
+```{python}
+# Ensure all rows in the data have a valid color mapping
+lowest20['continent_color'] = lowest20['Continent'].map(continent_color)
+
+# Create the bar plot
+fig_fert2 = px.bar(
+    lowest20,
+    y='Country/area',
+    x='Fertility Rate',
+    color='Continent',  # Use continent for coloring
+    hover_name='Country/area',
+    title='Lowest Total Fertility Rate in 2019',
+    color_discrete_map=continent_color  # Apply the predefined color mapping
+).update_layout(showlegend=False)
+
+fig_fert2
+```
+
+# Female Employment Rate
+
+## Row 1 {height=50%}
 
 ### Column {width="60%"}
 
 ```{python}
-map_fig2.show()
+map_fig2
 ```
 
 ### Column 
 
 ```{python}
-fig3 = px.bar(
+# Ensure all rows in the data have a valid color mapping
+highest_employ['continent_color'] = highest_employ['Continent'].map(continent_color)
+
+fig3 = px.pie(
     highest_employ,
-    x="Employment Rate",
-    y="Continent",
-    color="Country/area",
-    hover_name="Year",
-    title="Highest Female Employment Rate in Each Continent",
-#    labels={'mortality': 'Child Mortality', 'continent': 'Continent', 'country': 'Country'}
-).update_layout(
-    showlegend=False
+    values="Employment Rate",
+    names="Continent",
+    color='Continent',
+    hover_data="Employment Rate",
+    hover_name="Country/area",
+    title="Highest Female Employment Rate in 2019",
+    hole=0.3,
+    color_discrete_map=continent_color  # Apply the predefined color mapping
+).update_traces(
+    textinfo="label+percent", showlegend=False  # Show label and percent
 )
-#show(highest_employ[['Country/area', 'Continent','Year', 'Employment Rate']], caption="Highest Female Employment Rate in each Continent")
-fig3.show()
+
+fig3
 ```
 
-## Row 2 {height=40%}
+## Row 2 {height=50%}
 
 ### Column {width="60%"}
 
 ```{python}
-continent_fig = px.box(
+# Ensure all rows in the data have a valid color mapping
+highest_employ['continent_color'] = highest_employ['Continent'].map(continent_color)
+
+continent_fig = px.violin(
     employ_child_fert,
     x="Continent",
     y="Employment Rate",
@@ -478,17 +525,23 @@ continent_fig = px.box(
     title="Distribution of Female Employment Rate by Continent (1991-2019)",
     points="all",  # This shows all data points
     hover_data=["Country/area"],  # This adds country names to hover info
-    color_discrete_sequence=px.colors.sequential.Turbo,  # Built-in Blues palette
+    color_discrete_map=continent_color,
+    box=True,
 ).update_layout(
-    showlegend=False, xaxis_title="Continent", yaxis_title="Employment Rate",
+    showlegend=False,
+    xaxis_title="Continent",
+    yaxis_title="Employment Rate",
     sliders=[
         {
-            "active": employ_child_fert['Year'].unique().tolist().index(2018),  # Set slider to 2018 index
+            "active": employ_child_fert["Year"]
+            .unique()
+            .tolist()
+            .index(2018),  # Set slider to 2018 index
         }
-    ]
+    ],
 )
 
-continent_fig.show()
+continent_fig
 ```
 
 ### Column {width="40%"}
@@ -500,15 +553,19 @@ Africa exhibits the widest range of female employment rates, reflecting signific
 Asia also shows a broad range, with some countries having very low employment rates and others quite high. On the other hand, Europe, America, and Oceania demonstrate relatively smaller ranges, indicating more consistency within these continents. Furthermore, Europe and America have lower medians compared to Africa and Oceania, reflecting a slightly lower overall female employment rate.
 
 
-# DATA DOWNLOAD
+# Data Download
 
 ```{python}
+# | title: Child mortality, total fertility and employment rate Dataset (1991 to 2019)
 # Display full dataset with itables
-show(employ_child_fert, caption="Child mortality, total fertility and employment rate Dataset (1991 to 2019)", buttons=["csvHtml5"])
+show(
+    employ_child_fert,
+    buttons=["csvHtml5"],
+)
 ```
 
 
-# ABOUT
+# About
 
 The data used for this PBB's capstone project was obtained from [Gapminder's data repository](https://gapminder.org/data). Three indicators were selected for analysis namely; "child mortality", "total fertilty rate", and "female employment rate".
 
@@ -516,11 +573,9 @@ Total fertility rate is the number of children that would be born to a woman if 
 Child mortality is for 0 to 5 year olds dying per 1000 born.
 Female employment rate the percentage of female population, age group 15+, that has been employed during the given year.
 
-
 Gapminder is an independent Swedish foundation with no political, religious or economic affiliations. Gapminder fights devastating misconceptions and promotes a fact-based worldview everyone can understand.
 
-The Gapminder Foundation is a non-profit venture that promotes sustainable global development and achievement of the United Nations Millennium Development Goals by increasing use and understanding of statistics and other information about social, economic, and environmental development.
 
-**Watch Hans Rosling’s TED Talk:**
+**Watch Hans Rosling on Child Mortality in Developing Countries:**
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/hVimVzgtD6w?si=dKHepC5EXhjaXOe2" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+<iframe width="560" height="315" src="https://youtube.com/embed/OwII-dwh-bk?si=iVzuHDVHmiGmM_6b" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
