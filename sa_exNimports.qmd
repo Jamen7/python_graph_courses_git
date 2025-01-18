@@ -1,20 +1,25 @@
 ---
-title: "South Africa's Exports and Imports from Stats SA"
+title: "South Africa's Exports and Imports Unit Value Indices"
 author: 'James Matosse'
 format: 'html'
 ---
 
 # Introduction
 
-Analysis of the South Africa's exports and imports behaviours with the data gathered by Stats SA. The purpose of the analysis is showcase the skills acquired through courses and training I've been involved and/or privy to attend over the last two years.
+Analysis of the South Africa's exports and imports behaviours with the data gathered by Stats SA. The purpose of the analysis is showcase the skills acquired through courses and training I've been involved with and/or privy to attend over the last two years. The Stats SA statisitcal release P0142.7 will be used as guideline for key figures and analytical series.
 
-# Load the sheet content to inspect its structure
+## Load the sheet content to inspect its structure
 
-The downloaded data is in an excel spreadsheet and ranges from 2016 to 2024.
+The downloaded data is in an excel spreadsheet and ranges from 2016 to August 2024.
 
 ```{python}
 import pandas as pd
 import plotly.express as px
+import numpy as np
+import plotly.graph_objects as go
+
+import warnings
+warnings.filterwarnings("ignore")
 
 data = pd.read_excel('data/Export and Import Unit Value Indices 2016 to 2024.xlsx', sheet_name='Export and Import Unit Value In')
 data
@@ -22,7 +27,7 @@ data
 
 The read data has 67 rows and 112 columns, it is cleary a wide dataset.
 
-## Data cleaning
+# Data cleaning
 
 First, melt the wide data to easily perform data analysis. Columns H01, H02, H17, H18 and H25 can be removed. The observations were collected on a monthly bases. The December 2020 was used as the baseline for all the observations.
 
@@ -39,7 +44,8 @@ Reduce the categories
 The clean_data is now a long dataset with 6968 rows and 5 columns; the "Date" column contains the month and year for each observation. But the "Date" needs to be cleaned further for timeseries analysis, which will be done later. For now, let's plot the "Amount", "H04" and "H05" columns and draw some interprentations.
 
 ```{python}
-px.histogram(clean_data, y='H04', x='Amount', color='H04', title= "South Africa's Exports and Imports Summary")
+
+px.histogram(clean_data, y='H04', x='Amount', color='H04', title= "South Africa's Exports and Imports Summary",)
 ```
 
 The bar plot above indicate that the imports exceeds the exports by 50k of the unit value. Now, let's look at the subcategories for each imports and exports.
@@ -92,6 +98,7 @@ Other transportable goods is the highest category imported with a sum of 21.5k o
 
 ## Timeseries analysis
 
+For time series, extract the month and year from the date column and convert to datetime variable. Then we plot a line graph for All items subcategory.
 
 ```{python}
 # Extract month and year, and convert to datetime
@@ -100,9 +107,285 @@ clean_data.query('H05_truncated == "All items"')
 ```
 
 ```{python}
-px.line(clean_data.query('H04 == "Imports"'), x='datetime', y='Amount', color='H05_truncated')
+px.line(
+    clean_data.query('H04 == "Imports"'),
+    x="datetime",
+    y="Amount",
+    color="H05_truncated",
+)
 ```
 
 ```{python}
 px.line(clean_data.query('H04 == "Exports"'), x='datetime', y='Amount', color='H05_truncated')
+```
+
+# Statistical Release
+
+## Table A - Key figures
+
+```{python}
+tabA = data.loc[((data['H05'] == 'Exports') | (data['H05'] == 'Imports')), ['H05', 'MO082023', 'MO072024', 'MO082024']]
+
+tabA = tabA.rename(columns={'H05': 'Product', 'MO082023': 'Aug 2023', 'MO072024': 'Jul 2024', 'MO082024': 'Aug 2024'})
+
+tabA['Aug 2024 vs. Jul 2024'] = (((tabA['Aug 2024'] - tabA['Jul 2024']) / tabA['Jul 2024']) * 100).round(2).astype(str) + "%"
+
+tabA['Aug 2024 vs. Aug 2023'] = (((tabA['Aug 2024'] - tabA['Aug 2023']) / tabA['Aug 2023']) * 100).round(2).astype(str) + "%"
+
+tabA
+```
+
+## Table B - Analytical series
+
+```{python}
+data[data['H05'].isin(["Imports excluding crude", "Imports excluding crude pertroleum"])] # dataframe does not Imports excluding crude pertroleum as per P0142.7
+
+tabB = data.loc[((data['H05'] == 'Exports excluding gold') | (data['H05'] == 'Exports excluding ores and minerals') | (data['H05'] == 'Exports excluding basic metals') | (data['H05'] == 'Imports excluding crude')), ['H05', 'H18', 'MO082023', 'MO072024', 'MO082024']]
+
+tabB = tabB.rename(columns={'H05': 'Product', 'MO082023': 'Aug 2023', 'MO072024': 'Jul 2024', 'MO082024': 'Aug 2024'})
+
+tabB['Aug 2024 vs. Jul 2024'] = (((tabB['Aug 2024'] - tabB['Jul 2024']) / tabB['Jul 2024']) * 100).round(2).astype(str) + "%"
+
+tabB['Aug 2024 vs. Aug 2023'] = (((tabB['Aug 2024'] - tabB['Aug 2023']) / tabB['Aug 2023']) * 100).round(2).astype(str) + "%"
+
+tabB
+```
+
+## Export and import unit value indices
+
+```{python}
+color_scheme = {"Exports": '#6595a8', 'Imports': '#42c2f5'}
+
+fig_line = px.line(
+    clean_data.query('H05 == "Imports" | H05 == "Exports"'),
+    x="datetime",
+    y="Amount",
+    color="H05",
+    labels={'H05': "", 'Amount': 'Index', 'datetime': 'Period'},
+    color_discrete_map=color_scheme, 
+    line_dash='H05', 
+    title='Export and Import Unit Value Indices: January 2016 - August 2024'
+).update_layout(
+    yaxis_title= 'Index',
+    xaxis_title= "",
+    legend=dict(
+        orientation="h",  # Horizontal orientation
+        yanchor="top",  # Anchor at the top of the legend box
+        y=-0.2,  # Position it below the plot (adjust as needed)
+        xanchor="center",  # Center align the legend
+        x=0.5,  # Place at the center of the plot horizontally
+    ),
+)
+```
+
+## Export UVI rates of change (%)
+
+Annual rate of change is calculated as ((Aug 2024 - Aug 2023)/ Aug 2023) * 100
+
+```{python}
+# Prepare categories and an empty dictionary to store figures
+cats = ['Exports', 'Imports']
+figures = {}  # Dictionary to store figures
+
+for cat in cats:
+    exports_data = clean_data.query('H05 == @cat')
+    # Extract the month from the datetime column (since it contains date strings like 'YYYY-MM-dd')
+    exports_data['Month'] = pd.to_datetime(exports_data['datetime']).dt.month_name()
+#    return exports_data
+
+    # Calculate the monthly rate of change
+    exports_data['Monthly change (%)'] = exports_data['Amount'].pct_change() * 100
+
+    exports_data['Year'] = pd.to_datetime(exports_data['datetime']).dt.year
+
+    exports_data['Annual mean'] = exports_data.groupby('Year')['Amount'].transform('mean')
+
+    # Ensure the data is sorted by month number
+    exports_data['Month_Num'] = pd.to_datetime(exports_data['datetime']).dt.month
+    exports_data = exports_data.sort_values(by=['Month_Num', 'Year'])
+
+    # Calculate the annual change for each month
+    exports_data['Annual Change (%)'] = exports_data.groupby(['Month_Num'])['Amount'].pct_change(periods=1) * 100
+
+    # Re-sort the data
+    exports_data = exports_data.sort_values(by=['datetime']).query('datetime >= "2017-01-01"') # to remove the NaNs from 2016 annual change
+
+    # Create the figure
+    figE_bar_line = go.Figure()
+
+    # Add bar plot for 'monthly rate' vs. 'datetime' (y-axis 1)
+
+    figE_bar_line.add_trace(
+        go.Bar(
+            x=exports_data['datetime'],
+            y=exports_data['Monthly change (%)'],
+            name=f"Monthly rate",
+            marker=dict(color=color_scheme[cat]),  # Assign color
+        )
+    )
+
+    # Add a secondary y-axis for 'annual rate' (y-axis 2)
+
+    figE_bar_line.add_trace(
+        go.Line(
+            x=exports_data['datetime'],
+            y=exports_data['Annual Change (%)'],
+            mode='lines',
+            name=f"Annual rate",
+            yaxis='y2',
+            showlegend=True,  
+            line=dict(color='#646970')  # Assign matching color
+        )
+    )
+
+    # Update layout to include a second y-axis
+    figE_bar_line.update_layout(
+        title=f"{cat} UVI rates of change (%) from 2017 to 2024",
+        xaxis=dict(
+            title="", 
+#            gridcolor="#cccccc",  # Light gray for horizontal gridlines,
+#        linecolor="#333333",  # Dark gray for the secondary y-axis line
+#        linewidth=2,
+#        tickcolor="#555555",
+        # Thickness of the x-axis line
+#        ticks="outside",      # Display ticks outside the axis line
+#        tickwidth=2,          # Width of the ticks
+#        tickcolor="#333333",
+        ),
+        yaxis=dict(
+            title="Monthly rate", 
+            side='left',
+#            gridcolor="#cccccc",
+#            linecolor="#555555",  # Dark gray for the secondary y-axis line
+#            linewidth=2,
+#        tickcolor="#555555"
+        ),
+        yaxis2=dict(
+            title="Annual rate",
+            overlaying='y',
+            side='right',
+            showgrid=False,
+#            gridcolor="#cccccc",
+#            linecolor="#333333",  # Dark gray for the secondary y-axis line
+#            linewidth=2,
+        ),
+        legend=dict(
+            orientation='h',  # Horizontal orientation
+            yanchor='top',    # Anchor at the top of the legend box
+            y=-0.2,           # Position it below the plot (adjust as needed)
+            xanchor='center', # Center align the legend
+            x=0.5             # Place at the center of the plot horizontally
+        ),
+#        plot_bgcolor="#ffffff",  # Light gray background for the plot area #f9f9f9
+#        paper_bgcolor="#ffffff", # Slightly darker gray for the entire figure
+
+    )
+
+    # Show the figure
+#    figE_bar_line.show()
+
+    # Store the figure in the dictionary
+    figures[cat] = figE_bar_line
+
+# Access the first figure (e.g., for "Exports")
+exports_figure = figures['Exports']
+imports_figure = figures['Imports']
+exports_figure.show()
+imports_figure.show()
+```
+
+
+```{python}
+# import pandas as pd
+from tabulate import tabulate
+
+# Sample larger DataFrame
+data1 = {
+    "Category": [
+        "Fruits",
+        "Fruits",
+        "Fruits",
+        "Vegetables",
+        "Vegetables",
+        "Vegetables",
+    ],
+    "Subcategory": ["Citrus", "Citrus", "Berries", "Root", "Leafy", "Root"],
+    "Item": ["Orange", "Lemon", "Strawberry", "Carrot", "Spinach", "Potato"],
+    "Value": [10, 15, 20, 8, 12, 5],
+}
+df = pd.DataFrame(data1)
+
+# Initialize an empty DataFrame for cascading table
+cascading_table = pd.DataFrame(columns=["Category", "Subcategory", "Item", "Value"])
+
+# Slice data by Category and append it incrementally
+for category in df["Category"].unique():
+    # Add a row for the category
+    category_row = pd.DataFrame(
+        [{"Category": category, "Subcategory": "", "Item": "", "Value": ""}]
+    )
+    cascading_table = pd.concat([cascading_table, category_row], ignore_index=True)
+
+    # Filter data for the current category
+    category_data = df[df["Category"] == category]
+
+    for subcategory in category_data["Subcategory"].unique():
+        # Filter data for the current subcategory
+        subcategory_data = category_data[category_data["Subcategory"] == subcategory]
+
+        for _, row in subcategory_data.iterrows():
+            subcategory_row = pd.DataFrame(
+                [
+                    {
+                        "Category": "",
+                        "Subcategory": f"  {subcategory}",  # Indent subcategory
+                        "Item": f"    {row['Item']}",  # Indent item
+                        "Value": row["Value"],
+                    }
+                ]
+            )
+            cascading_table = pd.concat(
+                [cascading_table, subcategory_row], ignore_index=True
+            )
+
+# Print the cascading table
+print(tabulate(cascading_table, headers="keys", tablefmt="grid"))
+    
+```
+
+```{python}
+tabE = data.query('H04 == "Exports"')
+tab1 = tabE.loc[
+    (
+        (tabE["H05"] == "All items")
+        | (tabE["H05"] == "Agriculture")
+        | (tabE["H05"] == "Beverages")
+        | (tabE["H05"] == "Ores and minerals")
+        | (tabE["H05"] == "Metal products, machinery and equipment")
+        | (
+            tabE["H05"]
+            == "Other transportable goods, except metal products, machinery and equipment"
+        )
+    ),
+    ["H05", "H18", "MO082023", "MO072024", "MO082024"],
+]
+
+# tabB = tabB.rename(
+#     columns={
+#         "H05": "Product",
+#         "MO082023": "Aug 2023",
+#         "MO072024": "Jul 2024",
+#         "MO082024": "Aug 2024",
+#     }
+# )
+
+# tabB["Aug 2024 vs. Jul 2024"] = (
+#     ((tabB["Aug 2024"] - tabB["Jul 2024"]) / tabB["Jul 2024"]) * 100
+# ).round(2).astype(str) + "%"
+
+# tabB["Aug 2024 vs. Aug 2023"] = (
+#     ((tabB["Aug 2024"] - tabB["Aug 2023"]) / tabB["Aug 2023"]) * 100
+# ).round(2).astype(str) + "%"
+
+# tabB
 ```

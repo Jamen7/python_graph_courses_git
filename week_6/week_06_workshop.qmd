@@ -92,6 +92,7 @@ pa["mvpa_s_day"] = pd.to_numeric(pa["mvpa_s_day"], errors="coerce")
 ```{python}
 pa.info()
 ```
+
 Check the data types again with `info()`.
 
 ## Step 4: Recode the `status` variable
