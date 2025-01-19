@@ -176,6 +176,8 @@ fig_line = px.line(
         x=0.5,  # Place at the center of the plot horizontally
     ),
 )
+fig_line.show()
+
 ```
 
 ## Export UVI rates of change (%)
@@ -227,7 +229,7 @@ for cat in cats:
     # Add a secondary y-axis for 'annual rate' (y-axis 2)
 
     figE_bar_line.add_trace(
-        go.Line(
+        go.scatter.Line(
             x=exports_data['datetime'],
             y=exports_data['Annual Change (%)'],
             mode='lines',
@@ -272,7 +274,7 @@ for cat in cats:
         legend=dict(
             orientation='h',  # Horizontal orientation
             yanchor='top',    # Anchor at the top of the legend box
-            y=-0.2,           # Position it below the plot (adjust as needed)
+            y=-0.1,           # Position it below the plot (adjust as needed)
             xanchor='center', # Center align the legend
             x=0.5             # Place at the center of the plot horizontally
         ),
@@ -296,60 +298,60 @@ imports_figure.show()
 
 
 ```{python}
-# import pandas as pd
-from tabulate import tabulate
+# # import pandas as pd
+# from tabulate import tabulate
 
-# Sample larger DataFrame
-data1 = {
-    "Category": [
-        "Fruits",
-        "Fruits",
-        "Fruits",
-        "Vegetables",
-        "Vegetables",
-        "Vegetables",
-    ],
-    "Subcategory": ["Citrus", "Citrus", "Berries", "Root", "Leafy", "Root"],
-    "Item": ["Orange", "Lemon", "Strawberry", "Carrot", "Spinach", "Potato"],
-    "Value": [10, 15, 20, 8, 12, 5],
-}
-df = pd.DataFrame(data1)
+# # Sample larger DataFrame
+# data1 = {
+#     "Category": [
+#         "Fruits",
+#         "Fruits",
+#         "Fruits",
+#         "Vegetables",
+#         "Vegetables",
+#         "Vegetables",
+#     ],
+#     "Subcategory": ["Citrus", "Citrus", "Berries", "Root", "Leafy", "Root"],
+#     "Item": ["Orange", "Lemon", "Strawberry", "Carrot", "Spinach", "Potato"],
+#     "Value": [10, 15, 20, 8, 12, 5],
+# }
+# df = pd.DataFrame(data1)
 
-# Initialize an empty DataFrame for cascading table
-cascading_table = pd.DataFrame(columns=["Category", "Subcategory", "Item", "Value"])
+# # Initialize an empty DataFrame for cascading table
+# cascading_table = pd.DataFrame(columns=["Category", "Subcategory", "Item", "Value"])
 
-# Slice data by Category and append it incrementally
-for category in df["Category"].unique():
-    # Add a row for the category
-    category_row = pd.DataFrame(
-        [{"Category": category, "Subcategory": "", "Item": "", "Value": ""}]
-    )
-    cascading_table = pd.concat([cascading_table, category_row], ignore_index=True)
+# # Slice data by Category and append it incrementally
+# for category in df["Category"].unique():
+#     # Add a row for the category
+#     category_row = pd.DataFrame(
+#         [{"Category": category, "Subcategory": "", "Item": "", "Value": ""}]
+#     )
+#     cascading_table = pd.concat([cascading_table, category_row], ignore_index=True)
 
-    # Filter data for the current category
-    category_data = df[df["Category"] == category]
+#     # Filter data for the current category
+#     category_data = df[df["Category"] == category]
 
-    for subcategory in category_data["Subcategory"].unique():
-        # Filter data for the current subcategory
-        subcategory_data = category_data[category_data["Subcategory"] == subcategory]
+#     for subcategory in category_data["Subcategory"].unique():
+#         # Filter data for the current subcategory
+#         subcategory_data = category_data[category_data["Subcategory"] == subcategory]
 
-        for _, row in subcategory_data.iterrows():
-            subcategory_row = pd.DataFrame(
-                [
-                    {
-                        "Category": "",
-                        "Subcategory": f"  {subcategory}",  # Indent subcategory
-                        "Item": f"    {row['Item']}",  # Indent item
-                        "Value": row["Value"],
-                    }
-                ]
-            )
-            cascading_table = pd.concat(
-                [cascading_table, subcategory_row], ignore_index=True
-            )
+#         for _, row in subcategory_data.iterrows():
+#             subcategory_row = pd.DataFrame(
+#                 [
+#                     {
+#                         "Category": "",
+#                         "Subcategory": f"  {subcategory}",  # Indent subcategory
+#                         "Item": f"    {row['Item']}",  # Indent item
+#                         "Value": row["Value"],
+#                     }
+#                 ]
+#             )
+#             cascading_table = pd.concat(
+#                 [cascading_table, subcategory_row], ignore_index=True
+#             )
 
-# Print the cascading table
-print(tabulate(cascading_table, headers="keys", tablefmt="grid"))
+# # Print the cascading table
+# print(tabulate(cascading_table, headers="keys", tablefmt="grid"))
     
 ```
 
@@ -359,33 +361,273 @@ tab1 = tabE.loc[
     (
         (tabE["H05"] == "All items")
         | (tabE["H05"] == "Agriculture")
-        | (tabE["H05"] == "Beverages")
         | (tabE["H05"] == "Ores and minerals")
-        | (tabE["H05"] == "Metal products, machinery and equipment")
-        | (
-            tabE["H05"]
-            == "Other transportable goods, except metal products, machinery and equipment"
-        )
     ),
-    ["H05", "H18", "MO082023", "MO072024", "MO082024"],
+    ["H05", "H02", "H04", "H18", "MO012022", "MO122022", "MO012023"],
 ]
 
-# tabB = tabB.rename(
-#     columns={
-#         "H05": "Product",
-#         "MO082023": "Aug 2023",
-#         "MO072024": "Jul 2024",
-#         "MO082024": "Aug 2024",
-#     }
-# )
+tab2 = tabE.loc[
+    (
+        (tabE["H05"] == "Coal")
+        | (tabE["H05"] == "Metal ores")
+    ),
+    ["H02", "H05", "H04", "H18", "MO012022", "MO122022", "MO012023"],
+]
+tab2 = tab2.rename(columns={"H02": "H05", "H05": "H02"}) # This ensures that pd.concat does not re-order the columns
 
-# tabB["Aug 2024 vs. Jul 2024"] = (
-#     ((tabB["Aug 2024"] - tabB["Jul 2024"]) / tabB["Jul 2024"]) * 100
-# ).round(2).astype(str) + "%"
+tab3 = tabE.loc[
+    (
+        (tabE["H05"] == "Iron ores and concentrates")
+        | (tabE["H05"] == "Non-ferrous metal ores and concentrates")
+    ),
+    ["H02", "H04", "H05", "H18", "MO012022", "MO122022", "MO012023"],
+]
+tab3 = tab3.rename(columns={"H02": "H05", "H04": "H02", "H05": "H04"})
 
-# tabB["Aug 2024 vs. Aug 2023"] = (
-#     ((tabB["Aug 2024"] - tabB["Aug 2023"]) / tabB["Aug 2023"]) * 100
-# ).round(2).astype(str) + "%"
+tab4 = tabE.loc[
+    (
+        (tabE["H05"] == "Beverages")
+        | (tabE["H05"] == "Other transportable goods, except metal products, machinery and equipment")
+    ),
+    ["H05", "H02", "H04", "H18", "MO012022", "MO122022", "MO012023"],
+]
 
-# tabB
+tab5 = tabE.loc[
+    (
+        (tabE["H05"] == "Coke oven and refined petroleum products")
+        | (tabE["H05"] == "Basic chemicals")
+        | (tabE["H05"] == "Other chemical products")
+        | (tabE["H05"] == "Rubber and plastic products")
+    ),
+    ["H02", "H05", "H04", "H18", "MO012022", "MO122022", "MO012023"],
+]
+tab5 = tab5.rename(columns={"H02": "H05", "H05": "H02"})
+
+tab6 = tabE.loc[
+    (
+        (tabE["H05"] == "Metal products, machinery and equipment")
+    ),
+    ["H05", "H02", "H04", "H18", "MO012022", "MO122022", "MO012023"],
+]
+
+tab7 = tabE.loc[
+    (
+        (tabE["H05"] == "Basic metals")
+    ),
+    ["H02", "H05", "H04", "H18", "MO012022", "MO122022", "MO012023"],
+]
+tab7 = tab7.rename(columns={"H02": "H05", "H05": "H02"})
+
+tab8 = tabE.loc[
+    (
+        (tabE["H05"] == "Basic iron and steel")
+        | (tabE["H05"] == "Productsof iron and steel")
+        | (tabE["H05"] == "Basic precious metals and metals clad with precious metals")
+        | (tabE["H05"] == "Other semi-finished metal products")
+    ),
+    ["H02", "H04", "H05", "H18", "MO012022", "MO122022", "MO012023"],
+]
+tab8 = tab8.rename(columns={"H02": "H05", "H04": "H02", "H05": "H04"})
+
+tab9 = tabE.loc[
+    (
+        (tabE["H05"] == "Fabricated metal products, except machinery and equipment")
+        | (tabE["H05"] == "General purpose machinery")
+        | (tabE["H05"] == "Special-purpose machinery")
+        | (tabE["H05"] == "Transport equipment")
+        | (tabE["H05"] == "Motor vehicles")
+        | (tabE["H05"] == "Other  machinery and equipment") # double spacing between Other  machinery inherited from raw data
+    ),
+    ["H02", "H05", "H04", "H18", "MO012022", "MO122022", "MO012023"],
+]
+tab9 = tab9.rename(columns={"H02": "H05", "H05": "H02"})
+
+# pd.concat([tab1, tab2], ignore_index=False)
+```
+
+
+```{python}
+tables = [tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9]
+
+# Initialize an empty DataFrame for cascading table
+cascad_table = pd.DataFrame()
+
+for table in tables:
+    cascad_table = pd.concat([cascad_table, table], ignore_index=True)
+
+cascad_table
+
+replacements = {"Export and Import Unit Value Indices": "", "Exports": ""}
+
+cascad_table["H05"] = cascad_table["H05"].replace(replacements)
+cascad_table["H02"] = cascad_table["H02"].replace(replacements)
+cascad_table["H04"] = cascad_table["H04"].replace(replacements)
+
+cascad_table = cascad_table.rename(
+    columns={
+        "H05": "",
+        "H02": "Product",
+        "H04": "",
+        "H18": "Weight",
+        "MO012022": "Jan 2022",
+        "MO122022": "Dec 2022",
+        "MO012023": "Jan 2023",
+    }
+)
+```
+
+```{python}
+cascad_table['Jan 2023 vs. Dec 2022'] = (((cascad_table['Jan 2023'] - cascad_table['Dec 2022']) / cascad_table['Dec 2022']) * 100).round(2).astype(str) + "%"
+
+cascad_table['Jan 2023 vs. Jan 2022'] = (((cascad_table['Jan 2023'] - cascad_table['Jan 2022']) / cascad_table['Jan 2022']) * 100).round(2).astype(str) + "%"
+
+cascad_table
+# cascad_table.iloc[1 :,0:3].value_counts(normalize=True)
+
+```
+
+```{python}
+cascad_table.loc[~(cascad_table['Product'] == "")]  # Remove rows where all columns are empty strings
+
+cascad_table.loc[cascad_table.iloc[:,0] != ""]
+```
+
+Calculating the weights
+
+```{python}
+exports_weight = clean_data.query('H04 == "Exports"').query(
+    'datetime >= "2022-01-01" & datetime <= "2023-01-01"'
+)
+
+# Total agriculture
+total_agri = (
+    exports_weight.query('H05 == "Agriculture"')
+    .groupby("H05")["Amount"]
+    .sum()
+    .squeeze()
+)
+
+# Total coal
+total_coal = (
+    exports_weight.query('H05 == "Coal"').groupby("H05")["Amount"].sum().squeeze()
+)
+
+# Subtotal for metal ores
+sub_metal_ores = (
+    exports_weight.query(
+        'H05 == "Iron ores and concentrates" | H05 == "Non-ferrous metal ores and concentrates"'
+    )
+    .groupby("H05")["Amount"]
+    .sum()
+    .squeeze()
+)
+
+non_ferrous = sub_metal_ores["Non-ferrous metal ores and concentrates"]
+iron_ores = sub_metal_ores["Iron ores and concentrates"]
+
+total_metal_ores = sub_metal_ores.sum()
+
+# Ores and minerals
+total_ores = total_coal + total_metal_ores
+
+# Total beverages
+total_bev = (
+    exports_weight.query('H05 == "Beverages"').groupby("H05")["Amount"].sum().squeeze()
+)
+
+# Subtotal for other transportable
+sub_transportable = (
+    exports_weight.query(
+        'H05 == "Coke oven and refined petroleum products" | H05 == "Basic chemicals" | H05 == "Other chemical products" | H05 == "Rubber and plastic products"'
+    )
+    .groupby("H05")["Amount"]
+    .sum()
+    .squeeze()
+)
+
+# Total for other transportable
+total_transportable = sub_transportable.sum()
+
+# Subtotal for basic metals
+sub_basic_metals = (
+    exports_weight.query(
+        'H05 == "Basic iron and steel" | H05 == "Productsof iron and steel" | H05 == "Basic precious metals and metals clad with precious metals" | H05 == "Other semi-finished metal products"'
+    )
+    .groupby("H05")["Amount"]
+    .sum()
+    .squeeze()
+)
+
+# Total for basic metals
+total_basic_metals = sub_basic_metals.sum()
+
+# Subtotal for metal products excluding basic metals
+sub_other_metals = (
+    exports_weight.query(
+        'H05 == "Fabricated metal products, except machinery and equipment" | H05 == "General purpose machinery" | H05 == "Special-purpose machinery" | H05 == "Transport equipment" | H05 == "Motor vehicles" | H05 == "Other  machinery and equipment"'
+    )  # removed motor vehicles
+    .groupby("H05")["Amount"]
+    .sum()
+    .squeeze()
+)
+
+total_other_metals = sub_other_metals.sum()
+
+total_metal_products = total_basic_metals + total_other_metals
+
+# total exports from commodity groups
+total_exports_proper = (
+    total_agri + total_ores + total_bev + total_transportable + total_metal_products
+).round(2)
+
+# The weights for each commodity group
+weight_agri = ((total_agri / total_exports_proper) * 100).round(2)
+weight_agri
+
+weight_ores = ((total_ores / total_exports_proper) * 100).round(2)
+weight_ores
+
+weight_bev = ((total_bev / total_exports_proper) * 100).round(2)
+weight_bev
+
+weight_transportable = ((total_transportable / total_exports_proper) * 100).round(2)
+weight_transportable
+
+weight_metal = ((total_metal_products / total_exports_proper) * 100).round(2)
+weight_metal
+
+weight_all_items = (
+    weight_agri + weight_ores + weight_bev + weight_transportable + weight_metal
+)
+
+weight_iron_ores = ((iron_ores / total_exports_proper) * 100).round(2)
+weight_non_ferrous = ((non_ferrous / total_exports_proper) * 100).round(2)
+
+weight_basic_iron = ((sub_basic_metals[0] / total_exports_proper) * 100).round(2)
+weight_precious_metals = ((sub_basic_metals[1] / total_exports_proper) * 100).round(2)
+weight_semi_finished = ((sub_basic_metals[2] / total_exports_proper) * 100).round(2)
+weight_product_iron = ((sub_basic_metals[3] / total_exports_proper) * 100).round(2)
+
+
+weight_basic_metals = ((total_basic_metals / total_exports_proper) * 100).round(2)
+# Checking the weight
+weight_basic_iron + weight_precious_metals + weight_semi_finished + weight_product_iron
+
+weight_fabric_metal = ((sub_other_metals[0] / total_exports_proper) * 100).round(2)
+weight_gen_purpose = ((sub_other_metals[1] / total_exports_proper) * 100).round(2)
+weight_motor = ((sub_metal_products[2] / total_exports_proper) * 100).round(2)
+weight_machine_equip = ((sub_other_metals[3] / total_exports_proper) * 100).round(2)
+weight_spec_purpose = ((sub_other_metals[4] / total_exports_proper) * 100).round(2)
+weight_transport = ((sub_other_metals[5] / total_exports_proper) * 100).round(2)
+
+weight_other_metals = ((total_other_metals / total_exports_proper) * 100).round(2)
+# not the same
+(
+    weight_fabric_metal
+    + weight_gen_purpose
+    + weight_motor
+    + weight_machine_equip
+    + weight_spec_purpose
+    + weight_transport
+)
 ```
