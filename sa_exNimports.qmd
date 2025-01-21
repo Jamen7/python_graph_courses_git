@@ -186,31 +186,37 @@ Annual rate of change is calculated as ((Aug 2024 - Aug 2023)/ Aug 2023) * 100
 
 ```{python}
 # Prepare categories and an empty dictionary to store figures
-cats = ['Exports', 'Imports']
+cats = ["Exports", "Imports"]
 figures = {}  # Dictionary to store figures
 
 for cat in cats:
-    exports_data = clean_data.query('H05 == @cat')
+    exports_data = clean_data.query("H05 == @cat")
     # Extract the month from the datetime column (since it contains date strings like 'YYYY-MM-dd')
-    exports_data['Month'] = pd.to_datetime(exports_data['datetime']).dt.month_name()
-#    return exports_data
+    exports_data["Month"] = pd.to_datetime(exports_data["datetime"]).dt.month_name()
+    #    return exports_data
 
     # Calculate the monthly rate of change
-    exports_data['Monthly change (%)'] = exports_data['Amount'].pct_change() * 100
+    exports_data["Monthly change (%)"] = exports_data["Amount"].pct_change() * 100
 
-    exports_data['Year'] = pd.to_datetime(exports_data['datetime']).dt.year
+    exports_data["Year"] = pd.to_datetime(exports_data["datetime"]).dt.year
 
-    exports_data['Annual mean'] = exports_data.groupby('Year')['Amount'].transform('mean')
+    exports_data["Annual mean"] = exports_data.groupby("Year")["Amount"].transform(
+        "mean"
+    )
 
     # Ensure the data is sorted by month number
-    exports_data['Month_Num'] = pd.to_datetime(exports_data['datetime']).dt.month
-    exports_data = exports_data.sort_values(by=['Month_Num', 'Year'])
+    exports_data["Month_Num"] = pd.to_datetime(exports_data["datetime"]).dt.month
+    exports_data = exports_data.sort_values(by=["Month_Num", "Year"])
 
     # Calculate the annual change for each month
-    exports_data['Annual Change (%)'] = exports_data.groupby(['Month_Num'])['Amount'].pct_change(periods=1) * 100
+    exports_data["Annual Change (%)"] = (
+        exports_data.groupby(["Month_Num"])["Amount"].pct_change(periods=1) * 100
+    )
 
     # Re-sort the data
-    exports_data = exports_data.sort_values(by=['datetime']).query('datetime >= "2017-01-01"') # to remove the NaNs from 2016 annual change
+    exports_data = exports_data.sort_values(by=["datetime"]).query(
+        'datetime >= "2017-01-01"'
+    )  # to remove the NaNs from 2016 annual change
 
     # Create the figure
     figE_bar_line = go.Figure()
@@ -219,8 +225,8 @@ for cat in cats:
 
     figE_bar_line.add_trace(
         go.Bar(
-            x=exports_data['datetime'],
-            y=exports_data['Monthly change (%)'],
+            x=exports_data["datetime"],
+            y=exports_data["Monthly change (%)"],
             name=f"Monthly rate",
             marker=dict(color=color_scheme[cat]),  # Assign color
         )
@@ -229,14 +235,14 @@ for cat in cats:
     # Add a secondary y-axis for 'annual rate' (y-axis 2)
 
     figE_bar_line.add_trace(
-        go.scatter.Line(
-            x=exports_data['datetime'],
-            y=exports_data['Annual Change (%)'],
-            mode='lines',
+        go.Scatter(
+            x=exports_data["datetime"],
+            y=exports_data["Annual Change (%)"],
+            mode="lines",
             name=f"Annual rate",
-            yaxis='y2',
-            showlegend=True,  
-            line=dict(color='#646970')  # Assign matching color
+            yaxis="y2",
+            showlegend=True,
+            line=dict(color="#646970"),  # Assign matching color
         )
     )
 
@@ -244,54 +250,53 @@ for cat in cats:
     figE_bar_line.update_layout(
         title=f"{cat} UVI rates of change (%) from 2017 to 2024",
         xaxis=dict(
-            title="", 
-#            gridcolor="#cccccc",  # Light gray for horizontal gridlines,
-#        linecolor="#333333",  # Dark gray for the secondary y-axis line
-#        linewidth=2,
-#        tickcolor="#555555",
-        # Thickness of the x-axis line
-#        ticks="outside",      # Display ticks outside the axis line
-#        tickwidth=2,          # Width of the ticks
-#        tickcolor="#333333",
+            title="",
+            #            gridcolor="#cccccc",  # Light gray for horizontal gridlines,
+            #        linecolor="#333333",  # Dark gray for the secondary y-axis line
+            #        linewidth=2,
+            #        tickcolor="#555555",
+            # Thickness of the x-axis line
+            #        ticks="outside",      # Display ticks outside the axis line
+            #        tickwidth=2,          # Width of the ticks
+            #        tickcolor="#333333",
         ),
         yaxis=dict(
-            title="Monthly rate", 
-            side='left',
-#            gridcolor="#cccccc",
-#            linecolor="#555555",  # Dark gray for the secondary y-axis line
-#            linewidth=2,
-#        tickcolor="#555555"
+            title="Monthly rate",
+            side="left",
+            #            gridcolor="#cccccc",
+            #            linecolor="#555555",  # Dark gray for the secondary y-axis line
+            #            linewidth=2,
+            #        tickcolor="#555555"
         ),
         yaxis2=dict(
             title="Annual rate",
-            overlaying='y',
-            side='right',
+            overlaying="y",
+            side="right",
             showgrid=False,
-#            gridcolor="#cccccc",
-#            linecolor="#333333",  # Dark gray for the secondary y-axis line
-#            linewidth=2,
+            #            gridcolor="#cccccc",
+            #            linecolor="#333333",  # Dark gray for the secondary y-axis line
+            #            linewidth=2,
         ),
         legend=dict(
-            orientation='h',  # Horizontal orientation
-            yanchor='top',    # Anchor at the top of the legend box
-            y=-0.1,           # Position it below the plot (adjust as needed)
-            xanchor='center', # Center align the legend
-            x=0.5             # Place at the center of the plot horizontally
+            orientation="h",  # Horizontal orientation
+            yanchor="top",  # Anchor at the top of the legend box
+            y=-0.1,  # Position it below the plot (adjust as needed)
+            xanchor="center",  # Center align the legend
+            x=0.5,  # Place at the center of the plot horizontally
         ),
-#        plot_bgcolor="#ffffff",  # Light gray background for the plot area #f9f9f9
-#        paper_bgcolor="#ffffff", # Slightly darker gray for the entire figure
-
+        #        plot_bgcolor="#ffffff",  # Light gray background for the plot area #f9f9f9
+        #        paper_bgcolor="#ffffff", # Slightly darker gray for the entire figure
     )
 
     # Show the figure
-#    figE_bar_line.show()
+    #    figE_bar_line.show()
 
     # Store the figure in the dictionary
     figures[cat] = figE_bar_line
 
 # Access the first figure (e.g., for "Exports")
-exports_figure = figures['Exports']
-imports_figure = figures['Imports']
+exports_figure = figures["Exports"]
+imports_figure = figures["Imports"]
 exports_figure.show()
 imports_figure.show()
 ```
@@ -363,7 +368,7 @@ tab1 = tabE.loc[
         | (tabE["H05"] == "Agriculture")
         | (tabE["H05"] == "Ores and minerals")
     ),
-    ["H05", "H02", "H04", "H18", "MO012022", "MO122022", "MO012023"],
+    ["H05", "H02", "H04", "MO012022", "MO122022", "MO012023"],
 ]
 
 tab2 = tabE.loc[
@@ -371,7 +376,7 @@ tab2 = tabE.loc[
         (tabE["H05"] == "Coal")
         | (tabE["H05"] == "Metal ores")
     ),
-    ["H02", "H05", "H04", "H18", "MO012022", "MO122022", "MO012023"],
+    ["H02", "H05", "H04", "MO012022", "MO122022", "MO012023"],
 ]
 tab2 = tab2.rename(columns={"H02": "H05", "H05": "H02"}) # This ensures that pd.concat does not re-order the columns
 
@@ -380,7 +385,7 @@ tab3 = tabE.loc[
         (tabE["H05"] == "Iron ores and concentrates")
         | (tabE["H05"] == "Non-ferrous metal ores and concentrates")
     ),
-    ["H02", "H04", "H05", "H18", "MO012022", "MO122022", "MO012023"],
+    ["H02", "H04", "H05", "MO012022", "MO122022", "MO012023"],
 ]
 tab3 = tab3.rename(columns={"H02": "H05", "H04": "H02", "H05": "H04"})
 
@@ -389,7 +394,7 @@ tab4 = tabE.loc[
         (tabE["H05"] == "Beverages")
         | (tabE["H05"] == "Other transportable goods, except metal products, machinery and equipment")
     ),
-    ["H05", "H02", "H04", "H18", "MO012022", "MO122022", "MO012023"],
+    ["H05", "H02", "H04", "MO012022", "MO122022", "MO012023"],
 ]
 
 tab5 = tabE.loc[
@@ -399,7 +404,7 @@ tab5 = tabE.loc[
         | (tabE["H05"] == "Other chemical products")
         | (tabE["H05"] == "Rubber and plastic products")
     ),
-    ["H02", "H05", "H04", "H18", "MO012022", "MO122022", "MO012023"],
+    ["H02", "H05", "H04", "MO012022", "MO122022", "MO012023"],
 ]
 tab5 = tab5.rename(columns={"H02": "H05", "H05": "H02"})
 
@@ -407,14 +412,14 @@ tab6 = tabE.loc[
     (
         (tabE["H05"] == "Metal products, machinery and equipment")
     ),
-    ["H05", "H02", "H04", "H18", "MO012022", "MO122022", "MO012023"],
+    ["H05", "H02", "H04", "MO012022", "MO122022", "MO012023"],
 ]
 
 tab7 = tabE.loc[
     (
         (tabE["H05"] == "Basic metals")
     ),
-    ["H02", "H05", "H04", "H18", "MO012022", "MO122022", "MO012023"],
+    ["H02", "H05", "H04", "MO012022", "MO122022", "MO012023"],
 ]
 tab7 = tab7.rename(columns={"H02": "H05", "H05": "H02"})
 
@@ -425,7 +430,7 @@ tab8 = tabE.loc[
         | (tabE["H05"] == "Basic precious metals and metals clad with precious metals")
         | (tabE["H05"] == "Other semi-finished metal products")
     ),
-    ["H02", "H04", "H05", "H18", "MO012022", "MO122022", "MO012023"],
+    ["H02", "H04", "H05", "MO012022", "MO122022", "MO012023"],
 ]
 tab8 = tab8.rename(columns={"H02": "H05", "H04": "H02", "H05": "H04"})
 
@@ -438,7 +443,7 @@ tab9 = tabE.loc[
         | (tabE["H05"] == "Motor vehicles")
         | (tabE["H05"] == "Other  machinery and equipment") # double spacing between Other  machinery inherited from raw data
     ),
-    ["H02", "H05", "H04", "H18", "MO012022", "MO122022", "MO012023"],
+    ["H02", "H05", "H04", "MO012022", "MO122022", "MO012023"],
 ]
 tab9 = tab9.rename(columns={"H02": "H05", "H05": "H02"})
 
@@ -465,10 +470,10 @@ cascad_table["H04"] = cascad_table["H04"].replace(replacements)
 
 cascad_table = cascad_table.rename(
     columns={
-        "H05": "",
+        # "H05": "",
         "H02": "Product",
-        "H04": "",
-        "H18": "Weight",
+        # "H04": "",
+        # "H18": "Weight",
         "MO012022": "Jan 2022",
         "MO122022": "Dec 2022",
         "MO012023": "Jan 2023",
@@ -496,7 +501,7 @@ Calculating the weights
 
 ```{python}
 exports_weight = clean_data.query('H04 == "Exports"').query(
-    'datetime >= "2022-01-01" & datetime <= "2023-01-01"'
+    'datetime >= "2021-01-01" & datetime <= "2023-01-02"'
 )
 
 # Total agriculture
@@ -565,69 +570,132 @@ total_basic_metals = sub_basic_metals.sum()
 sub_other_metals = (
     exports_weight.query(
         'H05 == "Fabricated metal products, except machinery and equipment" | H05 == "General purpose machinery" | H05 == "Special-purpose machinery" | H05 == "Transport equipment" | H05 == "Motor vehicles" | H05 == "Other  machinery and equipment"'
-    )  # removed motor vehicles
+    )  
     .groupby("H05")["Amount"]
     .sum()
     .squeeze()
 )
 
-total_other_metals = sub_other_metals.sum()
+total_other_metals = sub_other_metals.sum() # not on the table
 
 total_metal_products = total_basic_metals + total_other_metals
 
 # total exports from commodity groups
 total_exports_proper = (
     total_agri + total_ores + total_bev + total_transportable + total_metal_products
-).round(2)
+)
 
 # The weights for each commodity group
-weight_agri = ((total_agri / total_exports_proper) * 100).round(2)
-weight_agri
+def calc_weight(comd):
+    return ((comd / total_exports_proper) * 100).round(1)
 
-weight_ores = ((total_ores / total_exports_proper) * 100).round(2)
-weight_ores
 
-weight_bev = ((total_bev / total_exports_proper) * 100).round(2)
-weight_bev
+weight_agri = calc_weight(total_agri)
 
-weight_transportable = ((total_transportable / total_exports_proper) * 100).round(2)
-weight_transportable
+weight_ores = calc_weight(total_ores)
 
-weight_metal = ((total_metal_products / total_exports_proper) * 100).round(2)
-weight_metal
+weight_coal = calc_weight(total_coal)
+
+weight_metal_ores = calc_weight(total_metal_ores)
+
+
+weight_iron_ores = calc_weight(iron_ores)
+
+weight_non_ferrous = calc_weight(non_ferrous)
+
+
+weight_bev = calc_weight(total_bev)
+
+weight_transportable = calc_weight(total_transportable)
+
+weight_basic_chem = calc_weight(sub_transportable[0])
+weight_coke = calc_weight(sub_transportable[1])
+weight_other_chem = calc_weight(sub_transportable[2])
+weight_rubber = calc_weight(sub_transportable[3])
+
+
+weight_metal_products = calc_weight(total_metal_products)
+
+weight_basic_metals = calc_weight(total_basic_metals)
+
+weight_basic_iron = calc_weight(sub_basic_metals[0])
+weight_precious_metals = calc_weight(sub_basic_metals[1])
+weight_semi_finished = calc_weight(sub_basic_metals[2])
+weight_product_iron = calc_weight(sub_basic_metals[3])
+
+
+weight_fabric_metal = calc_weight(sub_other_metals[0])
+weight_gen_purpose = calc_weight(sub_other_metals[1])
+weight_motor = calc_weight(sub_other_metals[2])
+weight_machine_equip = calc_weight(sub_other_metals[3])
+weight_spec_purpose = calc_weight(sub_other_metals[4])
+weight_transport = calc_weight(sub_other_metals[5])
 
 weight_all_items = (
-    weight_agri + weight_ores + weight_bev + weight_transportable + weight_metal
+    weight_agri + weight_ores + weight_bev + weight_transportable + weight_metal_products
 )
 
-weight_iron_ores = ((iron_ores / total_exports_proper) * 100).round(2)
-weight_non_ferrous = ((non_ferrous / total_exports_proper) * 100).round(2)
 
-weight_basic_iron = ((sub_basic_metals[0] / total_exports_proper) * 100).round(2)
-weight_precious_metals = ((sub_basic_metals[1] / total_exports_proper) * 100).round(2)
-weight_semi_finished = ((sub_basic_metals[2] / total_exports_proper) * 100).round(2)
-weight_product_iron = ((sub_basic_metals[3] / total_exports_proper) * 100).round(2)
+tb_data = {
+    "Product": [
+        "a1", "a2", "a3", "Coal", "Metal ores", 
+        "a4", "a5", "a6", "a7", "Coke oven and refined petroleum products",
+        "Basic chemicals", "Other chemical products", "Rubber and plastic products",
+        "a8", "Basic metals", "a9", "a10", "a11", "a12",
+        "Fabricated metal products, except machinery and equipment",
+        "General purpose machinery", "Special-purpose machinery",
+        "Transport equipment", "Motor vehicles", "Other  machinery and equipment"
+    ],
+    "Weight": [
+        weight_all_items, weight_agri, weight_ores, weight_coal, weight_metal_ores, weight_iron_ores, 
+        weight_non_ferrous, weight_bev, weight_transportable, weight_coke, weight_basic_chem, 
+        weight_other_chem, weight_rubber, weight_metal_products, weight_basic_metals, weight_basic_iron,
+        weight_product_iron, weight_precious_metals, weight_semi_finished, weight_fabric_metal, 
+        weight_gen_purpose, weight_spec_purpose, weight_transport, weight_motor, weight_machine_equip
+    ]
+}
+
+df_weights = pd.DataFrame(tb_data)
+
+# Initialize a counter for the replacement values
+counter = 1
+
+# Iterate over the rows and update empty strings
+for index, row in cascad_table.iterrows():
+    if row["Product"] == "":
+        cascad_table.at[index, "Product"] = f"a{counter}"
+        counter += 1  # Increment the counter for the next replacement
+    
+```
 
 
-weight_basic_metals = ((total_basic_metals / total_exports_proper) * 100).round(2)
-# Checking the weight
-weight_basic_iron + weight_precious_metals + weight_semi_finished + weight_product_iron
+```{python}
+tab1_exports = pd.merge(cascad_table,df_weights, on='Product', how='left')
 
-weight_fabric_metal = ((sub_other_metals[0] / total_exports_proper) * 100).round(2)
-weight_gen_purpose = ((sub_other_metals[1] / total_exports_proper) * 100).round(2)
-weight_motor = ((sub_metal_products[2] / total_exports_proper) * 100).round(2)
-weight_machine_equip = ((sub_other_metals[3] / total_exports_proper) * 100).round(2)
-weight_spec_purpose = ((sub_other_metals[4] / total_exports_proper) * 100).round(2)
-weight_transport = ((sub_other_metals[5] / total_exports_proper) * 100).round(2)
+col_list = list(tab1_exports.columns)
 
-weight_other_metals = ((total_other_metals / total_exports_proper) * 100).round(2)
-# not the same
-(
-    weight_fabric_metal
-    + weight_gen_purpose
-    + weight_motor
-    + weight_machine_equip
-    + weight_spec_purpose
-    + weight_transport
+col_list.insert(
+    3, col_list.pop(8)
+)  # Pop the 9th column (index 6) and insert at the 4th
+col_list
+
+tab1_exports = tab1_exports[col_list]
+
+# Initialize a counter for the replacement values
+countr = 1
+
+# Iterate over the rows and update empty strings
+for index, row in tab1_exports.iterrows():
+    if row["Product"] == f"a{countr}":
+        tab1_exports.at[index, "Product"] = ""
+        countr += 1  # Increment the counter for the next replacement
+
+tab1_exports = tab1_exports.rename(
+    columns={
+        "H05": "",
+        "H04": "",
+    }
 )
+
+tab1_exports
 ```
