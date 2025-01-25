@@ -362,113 +362,64 @@ imports_figure.show()
 
 ```{python}
 tabE = data.query('H04 == "Exports"')
-tab1 = tabE.loc[
-    (
-        (tabE["H05"] == "All items")
-        | (tabE["H05"] == "Agriculture")
-        | (tabE["H05"] == "Ores and minerals")
-    ),
-    ["H05", "H02", "H04", "MO012022", "MO122022", "MO012023"],
-]
 
-tab2 = tabE.loc[
-    (
-        (tabE["H05"] == "Coal")
-        | (tabE["H05"] == "Metal ores")
-    ),
-    ["H02", "H05", "H04", "MO012022", "MO122022", "MO012023"],
-]
-tab2 = tab2.rename(columns={"H02": "H05", "H05": "H02"}) # This ensures that pd.concat does not re-order the columns
+# Initialize an empty DataFrame
+t_table = pd.DataFrame()
 
-tab3 = tabE.loc[
-    (
-        (tabE["H05"] == "Iron ores and concentrates")
-        | (tabE["H05"] == "Non-ferrous metal ores and concentrates")
-    ),
-    ["H02", "H04", "H05", "MO012022", "MO122022", "MO012023"],
-]
-tab3 = tab3.rename(columns={"H02": "H05", "H04": "H02", "H05": "H04"})
+la = 1
+lb = 1
+lc = 1
+# Iterate over the rows
+for index, row in tabE.iterrows():
+    if row["H03"] == f"UVI4{la}000":
+        # Select specific columns and convert to a single-row DataFrame
+        col_sel = row[["H03", "H05", "H02", "H04", "MO012022", "MO122022", "MO012023"]].to_frame().T
 
-tab4 = tabE.loc[
-    (
-        (tabE["H05"] == "Beverages")
-        | (tabE["H05"] == "Other transportable goods, except metal products, machinery and equipment")
-    ),
-    ["H05", "H02", "H04", "MO012022", "MO122022", "MO012023"],
-]
+        # Concatenate the single-row DataFrame to the existing DataFrame
+        t_table = pd.concat([t_table, col_sel], ignore_index=True)
 
-tab5 = tabE.loc[
-    (
-        (tabE["H05"] == "Coke oven and refined petroleum products")
-        | (tabE["H05"] == "Basic chemicals")
-        | (tabE["H05"] == "Other chemical products")
-        | (tabE["H05"] == "Rubber and plastic products")
-    ),
-    ["H02", "H05", "H04", "MO012022", "MO122022", "MO012023"],
-]
-tab5 = tab5.rename(columns={"H02": "H05", "H05": "H02"})
+        # Increment `la` for the next iteration
+        la += 1
 
-tab6 = tabE.loc[
-    (
-        (tabE["H05"] == "Metal products, machinery and equipment")
-    ),
-    ["H05", "H02", "H04", "MO012022", "MO122022", "MO012023"],
-]
+        # Reset `lb` to 1 for the new `la-1`
+        lb = 1
 
-tab7 = tabE.loc[
-    (
-        (tabE["H05"] == "Basic metals")
-    ),
-    ["H02", "H05", "H04", "MO012022", "MO122022", "MO012023"],
-]
-tab7 = tab7.rename(columns={"H02": "H05", "H05": "H02"})
+    elif row["H03"] == f"UVI4{la-1}{lb}00":
 
-tab8 = tabE.loc[
-    (
-        (tabE["H05"] == "Basic iron and steel")
-        | (tabE["H05"] == "Productsof iron and steel")
-        | (tabE["H05"] == "Basic precious metals and metals clad with precious metals")
-        | (tabE["H05"] == "Other semi-finished metal products")
-    ),
-    ["H02", "H04", "H05", "MO012022", "MO122022", "MO012023"],
-]
-tab8 = tab8.rename(columns={"H02": "H05", "H04": "H02", "H05": "H04"})
+        col_sel1 = row[["H03", "H02", "H05", "H04", "MO012022", "MO122022", "MO012023"]].to_frame().T
 
-tab9 = tabE.loc[
-    (
-        (tabE["H05"] == "Fabricated metal products, except machinery and equipment")
-        | (tabE["H05"] == "General purpose machinery")
-        | (tabE["H05"] == "Special-purpose machinery")
-        | (tabE["H05"] == "Transport equipment")
-        | (tabE["H05"] == "Motor vehicles")
-        | (tabE["H05"] == "Other  machinery and equipment") # double spacing between Other  machinery inherited from raw data
-    ),
-    ["H02", "H05", "H04", "MO012022", "MO122022", "MO012023"],
-]
-tab9 = tab9.rename(columns={"H02": "H05", "H05": "H02"})
+        # Rename to ensure the second-level column selection order is maintained
+        col_sel1 = col_sel1.rename(columns={"H02": "H05", "H05": "H02"})
 
-# pd.concat([tab1, tab2], ignore_index=False)
+        t_table = pd.concat([t_table, col_sel1], ignore_index=True)
+
+        # Increment `lb` for the next iteration
+        lb += 1
+        # Reset `lc` to 1 for the new `lb-1`
+        lc = 1
+
+    elif row["H03"] == f"UVI4{la-1}{lb-1}{lc}0":
+        
+        col_sel2 = row[["H03", "H02", "H04", "H05", "MO012022", "MO122022", "MO012023"]].to_frame().T
+
+        col_sel2 = col_sel2.rename(columns={"H02": "H05", "H04": "H02", "H05": "H04"})
+        
+        t_table = pd.concat([t_table, col_sel2], ignore_index=True)
+
+        # Increment `lc` for the next iteration
+        lc += 1
+
+t_table
 ```
 
-
 ```{python}
-tables = [tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9]
-
-# Initialize an empty DataFrame for cascading table
-cascad_table = pd.DataFrame()
-
-for table in tables:
-    cascad_table = pd.concat([cascad_table, table], ignore_index=True)
-
-cascad_table
-
 replacements = {"Export and Import Unit Value Indices": "", "Exports": ""}
 
-cascad_table["H05"] = cascad_table["H05"].replace(replacements)
-cascad_table["H02"] = cascad_table["H02"].replace(replacements)
-cascad_table["H04"] = cascad_table["H04"].replace(replacements)
+t_table["H05"] = t_table["H05"].replace(replacements)
+t_table["H02"] = t_table["H02"].replace(replacements)
+t_table["H04"] = t_table["H04"].replace(replacements)
 
-cascad_table = cascad_table.rename(
+t_table = t_table.rename(
     columns={
         # "H05": "",
         "H02": "Product",
@@ -478,31 +429,197 @@ cascad_table = cascad_table.rename(
         "MO122022": "Dec 2022",
         "MO012023": "Jan 2023",
     }
-)
+).dropna()
+t_table
 ```
 
 ```{python}
-cascad_table['Jan 2023 vs. Dec 2022'] = (((cascad_table['Jan 2023'] - cascad_table['Dec 2022']) / cascad_table['Dec 2022']) * 100).round(2).astype(str) + "%"
+# tabE = data.query('H04 == "Exports"')
+# tab1 = tabE.loc[
+#     (
+#         (tabE["H05"] == "All items")
+#         | (tabE["H05"] == "Agriculture")
+#         | (tabE["H05"] == "Ores and minerals")
+#     ),
+#     ["H05", "H02", "H04", "MO012022", "MO122022", "MO012023"],
+# ]
 
-cascad_table['Jan 2023 vs. Jan 2022'] = (((cascad_table['Jan 2023'] - cascad_table['Jan 2022']) / cascad_table['Jan 2022']) * 100).round(2).astype(str) + "%"
+# tab2 = tabE.loc[
+#     (
+#         (tabE["H05"] == "Coal")
+#         | (tabE["H05"] == "Metal ores")
+#     ),
+#     ["H02", "H05", "H04", "MO012022", "MO122022", "MO012023"],
+# ]
+# tab2 = tab2.rename(columns={"H02": "H05", "H05": "H02"}) # This ensures that pd.concat does not re-order the columns
 
-cascad_table
+# tab3 = tabE.loc[
+#     (
+#         (tabE["H05"] == "Iron ores and concentrates")
+#         | (tabE["H05"] == "Non-ferrous metal ores and concentrates")
+#     ),
+#     ["H02", "H04", "H05", "MO012022", "MO122022", "MO012023"],
+# ]
+# tab3 = tab3.rename(columns={"H02": "H05", "H04": "H02", "H05": "H04"})
+
+# tab4 = tabE.loc[
+#     (
+#         (tabE["H05"] == "Beverages")
+#         | (tabE["H05"] == "Other transportable goods, except metal products, machinery and equipment")
+#     ),
+#     ["H05", "H02", "H04", "MO012022", "MO122022", "MO012023"],
+# ]
+
+# tab5 = tabE.loc[
+#     (
+#         (tabE["H05"] == "Coke oven and refined petroleum products")
+#         | (tabE["H05"] == "Basic chemicals")
+#         | (tabE["H05"] == "Other chemical products")
+#         | (tabE["H05"] == "Rubber and plastic products")
+#     ),
+#     ["H02", "H05", "H04", "MO012022", "MO122022", "MO012023"],
+# ]
+# tab5 = tab5.rename(columns={"H02": "H05", "H05": "H02"})
+
+# tab6 = tabE.loc[
+#     (
+#         (tabE["H05"] == "Metal products, machinery and equipment")
+#     ),
+#     ["H05", "H02", "H04", "MO012022", "MO122022", "MO012023"],
+# ]
+
+# tab7 = tabE.loc[
+#     (
+#         (tabE["H05"] == "Basic metals")
+#     ),
+#     ["H02", "H05", "H04", "MO012022", "MO122022", "MO012023"],
+# ]
+# tab7 = tab7.rename(columns={"H02": "H05", "H05": "H02"})
+
+# tab8 = tabE.loc[
+#     (
+#         (tabE["H05"] == "Basic iron and steel")
+#         | (tabE["H05"] == "Productsof iron and steel")
+#         | (tabE["H05"] == "Basic precious metals and metals clad with precious metals")
+#         | (tabE["H05"] == "Other semi-finished metal products")
+#     ),
+#     ["H02", "H04", "H05", "MO012022", "MO122022", "MO012023"],
+# ]
+# tab8 = tab8.rename(columns={"H02": "H05", "H04": "H02", "H05": "H04"})
+
+
+# tab9 = tabE.loc[
+#     (
+#         (tabE["H05"] == "Fabricated metal products, except machinery and equipment")
+#         | (tabE["H05"] == "General purpose machinery")
+#         | (tabE["H05"] == "Special-purpose machinery")
+#         | (tabE["H05"] == "Transport equipment")
+#         | (tabE["H05"] == "Motor vehicles")
+#         | (tabE["H05"] == "Other  machinery and equipment") # double spacing between Other  machinery inherited from raw data
+#     ),
+#     ["H02", "H05", "H04", "MO012022", "MO122022", "MO012023"],
+# ]
+# tab9 = tab9.rename(columns={"H02": "H05", "H05": "H02"})
+
+# tables = [tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9]
+
+# # Initialize an empty DataFrame for cascading table
+# cascad_table = pd.DataFrame()
+
+# for table in tables:
+#     cascad_table = pd.concat([cascad_table, table], ignore_index=True)
+
+# cascad_table
+
+# replacements = {"Export and Import Unit Value Indices": "", "Exports": ""}
+
+# cascad_table["H05"] = cascad_table["H05"].replace(replacements)
+# cascad_table["H02"] = cascad_table["H02"].replace(replacements)
+# cascad_table["H04"] = cascad_table["H04"].replace(replacements)
+
+# cascad_table = cascad_table.rename(
+#     columns={
+#         # "H05": "",
+#         "H02": "Product",
+#         # "H04": "",
+#         # "H18": "Weight",
+#         "MO012022": "Jan 2022",
+#         "MO122022": "Dec 2022",
+#         "MO012023": "Jan 2023",
+#     }
+# )
+
+# cascad_table['Jan 2023 vs. Dec 2022'] = (((cascad_table['Jan 2023'] - cascad_table['Dec 2022']) / cascad_table['Dec 2022']) * 100).round(2).astype(str) + "%"
+
+# cascad_table['Jan 2023 vs. Jan 2022'] = (((cascad_table['Jan 2023'] - cascad_table['Jan 2022']) / cascad_table['Jan 2022']) * 100).round(2).astype(str) + "%"
+
+# cascad_table
+```
+
+
+```{python}
+t_table['Jan 2023 vs. Dec 2022'] = (((t_table['Jan 2023'] - t_table['Dec 2022']) / t_table['Dec 2022']) * 100).round(2) #.astype(str) + "%"
+
+t_table['Jan 2023 vs. Jan 2022'] = (((t_table['Jan 2023'] - t_table['Jan 2022']) / t_table['Jan 2022']) * 100).round(2) #.astype(str) + "%"
+
+t_table
 # cascad_table.iloc[1 :,0:3].value_counts(normalize=True)
 
-```
-
-```{python}
-cascad_table.loc[~(cascad_table['Product'] == "")]  # Remove rows where all columns are empty strings
-
-cascad_table.loc[cascad_table.iloc[:,0] != ""]
 ```
 
 Calculating the weights
 
 ```{python}
-exports_weight = clean_data.query('H04 == "Exports"').query(
-    'datetime >= "2021-01-01" & datetime <= "2023-01-02"'
+exports_weight = (
+    clean_data.query('H04 == "Exports"')
+    .query('datetime >= "2021-01-01" & datetime <= "2023-01-02"')
+    .dropna()
 )
+
+test = exports_weight.groupby(["H03", "H05"])["Amount"].sum().to_frame().reset_index()
+
+la = 1
+lb = 1
+lc = 1
+# Iterate over the rows
+for index, row in test.iterrows():
+    if row["H03"] == f"UVI4{la}000":
+        # Select specific columns and convert to a single-row DataFrame
+        col_sel = (
+            row[["H03", "H05", "H02", "H04", "MO012022", "MO122022", "MO012023"]]
+            .to_frame()
+            .T
+        )
+
+        # Concatenate the single-row DataFrame to the existing DataFrame
+        t_table = pd.concat([t_table, col_sel], ignore_index=True)
+
+        # Increment `la` for the next iteration
+        la += 1
+
+        # Reset `lb` to 1 for the new `la-1`
+        lb = 1
+
+for index, row in tabE.iterrows():
+    match row["H03"]:
+        case f"UVI4{la}000":
+            col_sel = (
+                row[["H03", "H02", "H04", "H05", "MO012022", "MO122022", "MO012023"]]
+                .to_frame()
+                .T
+            )
+            t_table = pd.concat([t_table, col_sel], ignore_index=True)
+            la += 1
+
+        case f"UVI4{la-1}{lb}00":
+            col_sel = (
+                row[["H03", "H02", "H04", "H05", "MO012022", "MO122022", "MO012023"]]
+                .to_frame()
+                .T
+            )
+            t_table = pd.concat([t_table, col_sel], ignore_index=True)
+            lb += 1
+
 
 # Total agriculture
 total_agri = (
@@ -570,13 +687,13 @@ total_basic_metals = sub_basic_metals.sum()
 sub_other_metals = (
     exports_weight.query(
         'H05 == "Fabricated metal products, except machinery and equipment" | H05 == "General purpose machinery" | H05 == "Special-purpose machinery" | H05 == "Transport equipment" | H05 == "Motor vehicles" | H05 == "Other  machinery and equipment"'
-    )  
+    )
     .groupby("H05")["Amount"]
     .sum()
     .squeeze()
 )
 
-total_other_metals = sub_other_metals.sum() # not on the table
+total_other_metals = sub_other_metals.sum()  # not on the table
 
 total_metal_products = total_basic_metals + total_other_metals
 
@@ -584,6 +701,7 @@ total_metal_products = total_basic_metals + total_other_metals
 total_exports_proper = (
     total_agri + total_ores + total_bev + total_transportable + total_metal_products
 )
+
 
 # The weights for each commodity group
 def calc_weight(comd):
@@ -632,27 +750,69 @@ weight_spec_purpose = calc_weight(sub_other_metals[4])
 weight_transport = calc_weight(sub_other_metals[5])
 
 weight_all_items = (
-    weight_agri + weight_ores + weight_bev + weight_transportable + weight_metal_products
+    weight_agri
+    + weight_ores
+    + weight_bev
+    + weight_transportable
+    + weight_metal_products
 )
 
 
 tb_data = {
     "Product": [
-        "a1", "a2", "a3", "Coal", "Metal ores", 
-        "a4", "a5", "a6", "a7", "Coke oven and refined petroleum products",
-        "Basic chemicals", "Other chemical products", "Rubber and plastic products",
-        "a8", "Basic metals", "a9", "a10", "a11", "a12",
+        "a1",
+        "a2",
+        "a3",
+        "Coal",
+        "Metal ores",
+        "a4",
+        "a5",
+        "a6",
+        "a7",
+        "Coke oven and refined petroleum products",
+        "Basic chemicals",
+        "Other chemical products",
+        "Rubber and plastic products",
+        "a8",
+        "Basic metals",
+        "a9",
+        "a10",
+        "a11",
+        "a12",
         "Fabricated metal products, except machinery and equipment",
-        "General purpose machinery", "Special-purpose machinery",
-        "Transport equipment", "Motor vehicles", "Other  machinery and equipment"
+        "General purpose machinery",
+        "Special-purpose machinery",
+        "Transport equipment",
+        "Motor vehicles",
+        "Other  machinery and equipment",
     ],
     "Weight": [
-        weight_all_items, weight_agri, weight_ores, weight_coal, weight_metal_ores, weight_iron_ores, 
-        weight_non_ferrous, weight_bev, weight_transportable, weight_coke, weight_basic_chem, 
-        weight_other_chem, weight_rubber, weight_metal_products, weight_basic_metals, weight_basic_iron,
-        weight_product_iron, weight_precious_metals, weight_semi_finished, weight_fabric_metal, 
-        weight_gen_purpose, weight_spec_purpose, weight_transport, weight_motor, weight_machine_equip
-    ]
+        weight_all_items,
+        weight_agri,
+        weight_ores,
+        weight_coal,
+        weight_metal_ores,
+        weight_iron_ores,
+        weight_non_ferrous,
+        weight_bev,
+        weight_transportable,
+        weight_coke,
+        weight_basic_chem,
+        weight_other_chem,
+        weight_rubber,
+        weight_metal_products,
+        weight_basic_metals,
+        weight_basic_iron,
+        weight_product_iron,
+        weight_precious_metals,
+        weight_semi_finished,
+        weight_fabric_metal,
+        weight_gen_purpose,
+        weight_spec_purpose,
+        weight_transport,
+        weight_motor,
+        weight_machine_equip,
+    ],
 }
 
 df_weights = pd.DataFrame(tb_data)
@@ -698,4 +858,11 @@ tab1_exports = tab1_exports.rename(
 )
 
 tab1_exports
+```
+
+
+```{python}
+clean_data.loc[clean_data['H03'].str.contains('UVI43')].query(
+    'datetime >= "2022-01-01" & datetime <= "2023-01-01"'
+)
 ```
