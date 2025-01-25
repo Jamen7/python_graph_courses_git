@@ -362,11 +362,13 @@ imports_figure.show()
 
 ```{python}
 tabE = data.query('H04 == "Exports"')
+tabE.loc[tabE["H03"].str.contains('UVI45600')]
 
+tabE.iloc[25,2] == 'UVI45600'
 # Initialize an empty DataFrame
 t_table = pd.DataFrame()
 
-la = 1
+la = 0
 lb = 1
 lc = 1
 # Iterate over the rows
@@ -374,7 +376,7 @@ for index, row in tabE.iterrows():
     if row["H03"] == f"UVI4{la}000":
         # Select specific columns and convert to a single-row DataFrame
         col_sel = row[["H03", "H05", "H02", "H04", "MO012022", "MO122022", "MO012023"]].to_frame().T
-
+        # print(f"Index: {index}, H03: {row['H03']}, la: {la}, lb: {lb}, lc: {lc}")
         # Concatenate the single-row DataFrame to the existing DataFrame
         t_table = pd.concat([t_table, col_sel], ignore_index=True)
 
@@ -387,10 +389,10 @@ for index, row in tabE.iterrows():
     elif row["H03"] == f"UVI4{la-1}{lb}00":
 
         col_sel1 = row[["H03", "H02", "H05", "H04", "MO012022", "MO122022", "MO012023"]].to_frame().T
-
+        print(f"Index: {index}, H03: {row['H03']}, la: {la}, lb: {lb}, lc: {lc}")
         # Rename to ensure the second-level column selection order is maintained
         col_sel1 = col_sel1.rename(columns={"H02": "H05", "H05": "H02"})
-
+        print(f"Matched: {row['H03']} with UVI4{la-1}{lb}00")
         t_table = pd.concat([t_table, col_sel1], ignore_index=True)
 
         # Increment `lb` for the next iteration
@@ -401,13 +403,19 @@ for index, row in tabE.iterrows():
     elif row["H03"] == f"UVI4{la-1}{lb-1}{lc}0":
         
         col_sel2 = row[["H03", "H02", "H04", "H05", "MO012022", "MO122022", "MO012023"]].to_frame().T
-
+        print(f"Matched: {row['H03']} with UVI4{la-1}{lb-1}{lc}0")
         col_sel2 = col_sel2.rename(columns={"H02": "H05", "H04": "H02", "H05": "H04"})
         
         t_table = pd.concat([t_table, col_sel2], ignore_index=True)
 
         # Increment `lc` for the next iteration
         lc += 1
+    elif row["H03"] == "UVI45600":
+        col_sel3 = row[["H03", "H02", "H05", "H04", "MO012022", "MO122022", "MO012023"]].to_frame().T
+        
+        col_sel3 = col_sel3.rename(columns={"H02": "H05", "H05": "H02"})
+        
+        t_table = pd.concat([t_table, col_sel3], ignore_index=True)
 
 t_table
 ```
@@ -562,7 +570,7 @@ t_table['Jan 2023 vs. Dec 2022'] = (((t_table['Jan 2023'] - t_table['Dec 2022'])
 
 t_table['Jan 2023 vs. Jan 2022'] = (((t_table['Jan 2023'] - t_table['Jan 2022']) / t_table['Jan 2022']) * 100).round(2) #.astype(str) + "%"
 
-t_table
+t_table.shape
 # cascad_table.iloc[1 :,0:3].value_counts(normalize=True)
 
 ```
@@ -570,35 +578,132 @@ t_table
 Calculating the weights
 
 ```{python}
+
+# Helper function to calculate subtotal for a list of product categories
+def calculate_subtotal(df, categories):
+    return (
+        df.query("H05 in @categories")
+        .groupby("H05")["Amount"]
+        .sum()
+        .squeeze()
+    )
+
+# Helper function to calculate weights
+def calc_weight(value, total):
+    return ((value / total) * 100).round(1)
+
+# Product group mappings
+product_groups = {
+    "Agriculture": ["Agriculture"],
+    "Coal": ["Coal"],
+    "Metal Ores": [
+        "Iron ores and concentrates",
+        "Non-ferrous metal ores and concentrates",
+    ],
+    "Beverages": ["Beverages"],
+    "Other Transportable": [
+        "Coke oven and refined petroleum products",
+        "Basic chemicals",
+        "Other chemical products",
+        "Rubber and plastic products",
+    ],
+    "Basic Metals": [
+        "Basic iron and steel",
+        "Productsof iron and steel",
+        "Basic precious metals and metals clad with precious metals",
+        "Other semi-finished metal products",
+    ],
+    "Other Metal Products": [
+        "Fabricated metal products, except machinery and equipment",
+        "General purpose machinery",
+        "Special-purpose machinery",
+        "Transport equipment",
+        "Other  machinery and equipment",
+    ],
+}
+
+# Calculate subtotals for each group
+subtotals = {group: calculate_subtotal(exports_weight, categories) for group, categories in product_groups.items()}
+
+# Calculate totals for combined groups
+total_agri = subtotals["Agriculture"]
+total_coal = subtotals["Coal"]
+total_metal_ores = subtotals["Metal Ores"].sum()
+iron_ores = subtotals["Metal Ores"]["Iron ores and concentrates"]
+non_ferrous = subtotals["Metal Ores"]["Non-ferrous metal ores and concentrates"]
+total_ores = total_coal + total_metal_ores
+total_bev = subtotals["Beverages"]
+total_transportable = subtotals["Other Transportable"].sum()
+total_basic_metals = subtotals["Basic Metals"].sum()
+total_other_metals = subtotals["Other Metal Products"].sum()
+total_metal_products = total_basic_metals + total_other_metals
+
+subtotals_df = pd.DataFrame(list(subtotals.items()), columns=["H05", "Weight"])
+
+# Calculate total exports
+total_exports_proper = (
+    total_agri + total_ores + total_bev + total_transportable + total_metal_products
+)
+
+# Calculate weights
+weights = {group: calc_weight(total, total_exports_proper) for group, total in subtotals.items()}
+
+# Individual weights
+weights.update({
+    "Iron Ores": calc_weight(iron_ores, total_exports_proper),
+    "Non-Ferrous Ores": calc_weight(non_ferrous, total_exports_proper),
+    "All Items": sum(weights.values()),  # Sum of all weights
+})
+
+# Display results
+print("Weights:")
+for group, weight in weights.items():
+    print(f"{group}: {weight}%")
+
+[weights]
+weights[weights.keys]
+
+weights_df = pd.DataFrame.from_dict(weights, orient="index", columns=["Weight"]).reset_index()
+weights_df.rename(columns={"index": "H05"}, inplace=True)
+
+weights_df = pd.DataFrame(list(weights.items()), columns=["H05", "Weight"])
+
+#
+```
+
+```{python}
 exports_weight = (
     clean_data.query('H04 == "Exports"')
-    .query('datetime >= "2021-01-01" & datetime <= "2023-01-02"')
+    .query('datetime >= "2022-01-01" & datetime <= "2023-01-02"')
     .dropna()
 )
 
-test = exports_weight.groupby(["H03", "H05"])["Amount"].sum().to_frame().reset_index()
+test = exports_weight.groupby(["H03", "H05"]).agg(sum_ind = ("Amount", "sum")).reset_index()
 
 la = 1
 lb = 1
 lc = 1
+
+hs_total = 0
+
 # Iterate over the rows
 for index, row in test.iterrows():
-    if row["H03"] == f"UVI4{la}000":
+    if row["H03"] == f"UVI4{lc}000":
         # Select specific columns and convert to a single-row DataFrame
         col_sel = (
-            row[["H03", "H05", "H02", "H04", "MO012022", "MO122022", "MO012023"]]
-            .to_frame()
-            .T
+            row[["sum_ind"]]
+            # .to_frame()
+            # .T
         )
-
+        print(f"Matched: {row['H03']} with UVI4{la}000")
         # Concatenate the single-row DataFrame to the existing DataFrame
-        t_table = pd.concat([t_table, col_sel], ignore_index=True)
+        hs_total = hs_total + col_sel
 
         # Increment `la` for the next iteration
         la += 1
-
+hs_total
         # Reset `lb` to 1 for the new `la-1`
-        lb = 1
+        # lb = 1
 
 for index, row in tabE.iterrows():
     match row["H03"]:
@@ -620,6 +725,12 @@ for index, row in tabE.iterrows():
             t_table = pd.concat([t_table, col_sel], ignore_index=True)
             lb += 1
 
+
+exports_weight = (
+    clean_data.query('H04 == "Exports"')
+    .query('datetime >= "2022-01-01" & datetime <= "2023-01-02"')
+    .dropna()
+)
 
 # Total agriculture
 total_agri = (
@@ -686,7 +797,7 @@ total_basic_metals = sub_basic_metals.sum()
 # Subtotal for metal products excluding basic metals
 sub_other_metals = (
     exports_weight.query(
-        'H05 == "Fabricated metal products, except machinery and equipment" | H05 == "General purpose machinery" | H05 == "Special-purpose machinery" | H05 == "Transport equipment" | H05 == "Motor vehicles" | H05 == "Other  machinery and equipment"'
+        'H05 == "Fabricated metal products, except machinery and equipment" | H05 == "General purpose machinery" | H05 == "Special-purpose machinery" | H05 == "Transport equipment" | H05 == "Other  machinery and equipment"'
     )
     .groupby("H05")["Amount"]
     .sum()
@@ -744,10 +855,11 @@ weight_product_iron = calc_weight(sub_basic_metals[3])
 
 weight_fabric_metal = calc_weight(sub_other_metals[0])
 weight_gen_purpose = calc_weight(sub_other_metals[1])
-weight_motor = calc_weight(sub_other_metals[2])
-weight_machine_equip = calc_weight(sub_other_metals[3])
-weight_spec_purpose = calc_weight(sub_other_metals[4])
-weight_transport = calc_weight(sub_other_metals[5])
+
+weight_machine_equip = calc_weight(sub_other_metals[2])
+weight_spec_purpose = calc_weight(sub_other_metals[3])
+weight_transport = calc_weight(sub_other_metals[4])
+weight_motor = weight_transport
 
 weight_all_items = (
     weight_agri
@@ -757,44 +869,18 @@ weight_all_items = (
     + weight_metal_products
 )
 
-
+h03 = t_table['H03']
 tb_data = {
-    "Product": [
-        "a1",
-        "a2",
-        "a3",
-        "Coal",
-        "Metal ores",
-        "a4",
-        "a5",
-        "a6",
-        "a7",
-        "Coke oven and refined petroleum products",
-        "Basic chemicals",
-        "Other chemical products",
-        "Rubber and plastic products",
-        "a8",
-        "Basic metals",
-        "a9",
-        "a10",
-        "a11",
-        "a12",
-        "Fabricated metal products, except machinery and equipment",
-        "General purpose machinery",
-        "Special-purpose machinery",
-        "Transport equipment",
-        "Motor vehicles",
-        "Other  machinery and equipment",
-    ],
+    "H03":h03,
     "Weight": [
         weight_all_items,
         weight_agri,
+        weight_bev,
         weight_ores,
         weight_coal,
         weight_metal_ores,
         weight_iron_ores,
         weight_non_ferrous,
-        weight_bev,
         weight_transportable,
         weight_coke,
         weight_basic_chem,
@@ -817,26 +903,138 @@ tb_data = {
 
 df_weights = pd.DataFrame(tb_data)
 
+tab1_exports = pd.merge(t_table,df_weights, on='H03', how='left')
+
 # Initialize a counter for the replacement values
 counter = 1
 
 # Iterate over the rows and update empty strings
-for index, row in cascad_table.iterrows():
+for index, row in t_table.iterrows():
     if row["Product"] == "":
-        cascad_table.at[index, "Product"] = f"a{counter}"
+        t_table.at[index, "Product"] = f"a{counter}"
         counter += 1  # Increment the counter for the next replacement
     
 ```
 
+```{python}
+
+# Filter and clean data
+exports_weight = (
+    clean_data.query('H04 == "Exports"')
+    .query('datetime >= "2022-01-01" & datetime <= "2023-01-02"')
+    .dropna()
+)
+
+# Helper function to calculate subtotal for given H03 values
+def calculate_subtotal(df, h03_values):
+    return (
+        df.query("H03 in @h03_values")
+        .groupby("H03")["Amount"]
+        .sum()
+        .squeeze()
+    )
+
+# Helper function to calculate weights
+def calc_weight(value, total):
+    return ((value / total) * 100).round(1)
+
+# Define product groups using H03 codes
+product_groups_h03 = {
+    "Agriculture": ["UVI41000"],
+    "Coal": ["UVI43100"],
+    "Metal Ores": ["UVI43210", "UVI4320"],
+    "Beverages": ["UVI42000"],
+    "Other Transportable": [
+        "UVI44100",
+        "UVI44200",
+        "UVI44300",
+        "UVI44500",
+    ],
+    "Basic Metals": [
+        "UVI45110",
+        "UVI45120",
+        "UVI45130",
+        "UVI45140",
+    ],
+    "Other Metal Products": [
+        "UVI45600",
+        "UVI45200",
+        "UVI45300",
+        "UVI45400",
+        "UVI45410",
+        "UVI45500",
+    ],
+}
+
+# Calculate subtotals for each group
+subtotals = {
+    group: calculate_subtotal(exports_weight, h03_codes)
+    for group, h03_codes in product_groups_h03.items()
+}
+
+# Specific subtotals
+# iron_ores = subtotals["Metal Ores"]["UVI43210"]
+# non_ferrous = subtotals["Metal Ores"]["UVI43220"]
+total_metal_ores = subtotals["Metal Ores"].sum()
+total_ores = subtotals["Coal"] + total_metal_ores
+total_transportable = subtotals["Other Transportable"].sum()
+total_basic_metals = subtotals["Basic Metals"].sum()
+total_other_metals = subtotals["Other Metal Products"].sum()
+total_metal_products = total_basic_metals + total_other_metals
+
+# Total exports
+total_exports_proper = (
+    subtotals["Agriculture"] + total_ores + subtotals["Beverages"] +
+    total_transportable + total_metal_products
+)
+
+# Calculate weights for all groups
+weights = {group: calc_weight(total, total_exports_proper) for group, total in subtotals.items()}
+
+# Add individual weights for subcategories
+weights.update({
+    "Iron Ores": calc_weight(iron_ores, total_exports_proper),
+    "Non-Ferrous Ores": calc_weight(non_ferrous, total_exports_proper),
+    "All Items": sum(weights.values()),  # Sum of all weights
+})
+
+# Create the DataFrame for weights
+h03 = t_table["H03"]
+tb_data = {
+    "H03": h03,
+    "Weight": [
+        weights.get("All Items", 0),
+        weights.get("Agriculture", 0),
+        weights.get("Beverages", 0),
+        weights.get("Metal Ores", 0),
+        weights.get("Coal", 0),
+        weights.get("Iron Ores", 0),
+        weights.get("Non-Ferrous Ores", 0),
+        weights.get("Other Transportable", 0),
+        weights.get("Basic Metals", 0),
+        weights.get("Other Metal Products", 0),
+    ],
+}
+
+df_weights = pd.DataFrame(tb_data)
+
+# Merge weights with t_table
+tab1_exports = pd.merge(t_table, df_weights, on="H03", how="left")
+
+# Display the resulting table
+print(tab1_exports)
+
+
+```
 
 ```{python}
-tab1_exports = pd.merge(cascad_table,df_weights, on='Product', how='left')
-
+tab1_exports = pd.merge(t_table,df_weights, on='H03', how='left')
+tab1_exports.shape
 col_list = list(tab1_exports.columns)
 
 col_list.insert(
-    3, col_list.pop(8)
-)  # Pop the 9th column (index 6) and insert at the 4th
+    4, col_list.pop(9)
+)  # Pop the 10th column (index 9) and insert at the 5th
 col_list
 
 tab1_exports = tab1_exports[col_list]
@@ -865,4 +1063,85 @@ tab1_exports
 clean_data.loc[clean_data['H03'].str.contains('UVI43')].query(
     'datetime >= "2022-01-01" & datetime <= "2023-01-01"'
 )
+```
+
+
+```{python}
+tabI = data.query('H04 == "Imports"')
+# Initialize an empty DataFrame
+t_table1 = pd.DataFrame()
+
+la = 0
+lb = 1
+lc = 1
+# Iterate over the rows
+for index, row in tabI.iterrows():
+    if row["H03"] == f"UVI5{la}000":
+        # Select specific columns and convert to a single-row DataFrame
+        col_sel = row[["H03", "H05", "H02", "H04", "MO012022", "MO122022", "MO012023"]].to_frame().T
+        # print(f"Index: {index}, H03: {row['H03']}, la: {la}, lb: {lb}, lc: {lc}")
+        # Concatenate the single-row DataFrame to the existing DataFrame
+        t_table = pd.concat([t_table1, col_sel], ignore_index=True)
+
+        # Increment `la` for the next iteration
+        la += 1
+
+        # Reset `lb` to 1 for the new `la-1`
+        lb = 1
+
+    elif row["H03"] == f"UVI5{la-1}{lb}00":
+
+        col_sel1 = row[["H03", "H02", "H05", "H04", "MO012022", "MO122022", "MO012023"]].to_frame().T
+        print(f"Index: {index}, H03: {row['H03']}, la: {la}, lb: {lb}, lc: {lc}")
+        # Rename to ensure the second-level column selection order is maintained
+        col_sel1 = col_sel1.rename(columns={"H02": "H05", "H05": "H02"})
+        print(f"Matched: {row['H03']} with UVI4{la-1}{lb}00")
+        t_table = pd.concat([t_table1, col_sel1], ignore_index=True)
+
+        # Increment `lb` for the next iteration
+        lb += 1
+        # Reset `lc` to 1 for the new `lb-1`
+        lc = 1
+
+    elif row["H03"] == f"UVI5{la-1}{lb-1}{lc}0":
+        
+        col_sel2 = row[["H03", "H02", "H04", "H05", "MO012022", "MO122022", "MO012023"]].to_frame().T
+        print(f"Matched: {row['H03']} with UVI5{la-1}{lb-1}{lc}0")
+        col_sel2 = col_sel2.rename(columns={"H02": "H05", "H04": "H02", "H05": "H04"})
+        
+        t_table = pd.concat([t_table1, col_sel2], ignore_index=True)
+
+        # Increment `lc` for the next iteration
+        lc += 1
+    # elif row["H03"] == "UVI45600":
+    #     col_sel3 = row[["H03", "H02", "H05", "H04", "MO012022", "MO122022", "MO012023"]].to_frame().T
+        
+    #     col_sel3 = col_sel3.rename(columns={"H02": "H05", "H05": "H02"})
+        
+    #     t_table = pd.concat([t_table, col_sel3], ignore_index=True)
+
+t_table1
+```
+
+
+```{python}
+replacements = {"Export and Import Unit Value Indices": "", "Exports": ""}
+
+t_table1["H05"] = t_table1["H05"].replace(replacements)
+t_table1["H02"] = t_table1["H02"].replace(replacements)
+t_table1["H04"] = t_table1["H04"].replace(replacements)
+
+t_table1 = t_table1.rename(
+    columns={
+        # "H05": "",
+        "H02": "Product",
+        # "H04": "",
+        # "H18": "Weight",
+        "MO012022": "Jan 2022",
+        "MO122022": "Dec 2022",
+        "MO012023": "Jan 2023",
+    }
+).dropna()
+t_table1
+
 ```
